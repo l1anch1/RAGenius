@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>金融知识库系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>金融知识库系统</h1>
+            <div class="system-info">
+                <span id="model-info">模型: 加载中...</span>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="query">查询知识库</button>
+            <button class="tab-btn" data-tab="rebuild">重建知识库</button>
+            <button class="tab-btn" data-tab="documents">文档列表</button>
+        </div>
+
+        <div class="tab-content">
+            <!-- 查询知识库 -->
+            <div class="tab-pane active" id="query">
+                <div class="not-initialized-warning" id="warning-message" style="display: none;">
+                    警告: 知识库未初始化，请先重建知识库
+                </div>
+
+                <div class="search-box">
+                    <input type="text" id="query-input" placeholder="请输入您的问题...">
+                    <button id="query-btn">查询</button>
+                </div>
+
+                <div class="loading" id="query-loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>处理查询中...</p>
+                </div>
+
+                <div class="results" id="results" style="display: none;">
+                    <div class="answer-box">
+                        <h3>回答:</h3>
+                        <div id="answer-content"></div>
+                    </div>
+
+                    <div class="sources-box" id="sources-box">
+                        <h3>参考来源:</h3>
+                        <div id="sources-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 重建知识库 -->
+            <div class="tab-pane" id="rebuild">
+                <p>重建知识库将重新处理所有文档并更新向量数据库。这个过程可能需要几分钟时间。</p>
+                <button id="rebuild-btn" class="primary-btn">开始重建知识库</button>
+
+                <div class="loading" id="rebuild-loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>正在重建知识库...</p>
+                </div>
+
+                <div class="message-box success" id="rebuild-success" style="display: none;"></div>
+                <div class="message-box error" id="rebuild-error" style="display: none;"></div>
+            </div>
+
+            <!-- 文档列表 -->
+            <div class="tab-pane" id="documents">
+                <h3>知识库文档</h3>
+                <button id="refresh-docs-btn" class="small-btn">刷新列表</button>
+
+                <div class="loading" id="documents-loading" style="display: none;">
+                    <div class="spinner"></div>
+                </div>
+
+                <div id="documents-list" class="documents-list">
+                    <!-- 文档列表将在这里显示 -->
+                </div>
+                <div id="no-documents-message" class="no-documents" style="display: none;">
+                    知识库中没有文档
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>

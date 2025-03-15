@@ -1,0 +1,10 @@
+pypdf>=3.17.1
+flask>=2.0.0
+flask-cors>=4.0.0
+langchain>=0.1.4
+langchain-core>=0.1.4
+langchain-ollama>=0.0.3
+langchain-community>=0.0.16
+langchain-chroma>=0.0.12
+langchain-huggingface>=0.0.1
+langchain-sentence-transformers>=0.0.1
