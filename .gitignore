@@ -33,8 +33,16 @@ venv/
 vectorstore/  
 
 
-documents/*  
-!documents/.gitkeep  
+data/*  
+!data/.gitkeep  
+!data/documents/  
+!data/documents/.gitkeep  
+!data/vectordb/  
+!data/vectordb/.gitkeep  
+ 
+app/models_cache/*    
+!app/models_cache/.gitkeep  
+
 
   
 .DS_Store  
