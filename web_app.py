@@ -156,7 +156,7 @@ def get_documents():
         documents = []
         for file_name in os.listdir(DOCUMENTS_DIR):
             file_path = os.path.join(DOCUMENTS_DIR, file_name)
-            if os.path.isfile(file_path):
+            if os.path.isfile(file_path) and file_name != ".gitkeep":
                 documents.append(file_name)
 
         return jsonify({"status": "success", "documents": documents})

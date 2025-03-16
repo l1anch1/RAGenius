@@ -19,7 +19,7 @@ def load_documents(directory_path: str = DOCUMENTS_DIR) -> List[Document]:
         return documents
 
     for file_path in directory.iterdir():
-        if not file_path.is_file():
+        if not file_path.is_file() or file_path.name == ".gitkeep":
             continue
 
         try:
