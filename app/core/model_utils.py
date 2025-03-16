@@ -1,23 +1,33 @@
+import os
+import glob
+import sys
 from typing import Optional
 from langchain_ollama import OllamaLLM
-from langchain_ollama import OllamaEmbeddings
 from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain_core.embeddings import Embeddings
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain.embeddings.base import Embeddings
 
 from app.config import (
-    DEFAULT_LLM_MODEL, DEFAULT_EMBEDDING_MODEL, MODEL_TEMPERATURE, MODEL_TOP_P,
-    MODEL_NUM_CTX, MODEL_NUM_PREDICT, MODEL_NUM_THREAD
+    DEFAULT_LLM_MODEL,
+    DEFAULT_EMBEDDING_MODEL,
+    MODEL_TEMPERATURE,
+    MODEL_TOP_P,
+    MODEL_NUM_CTX,
+    MODEL_NUM_PREDICT,
+    MODEL_NUM_THREAD,
 )
-import app.core.shared_instances as shared  
+import app.core.shared_instances as shared
+
 
 def get_llm(
-        model: str = DEFAULT_LLM_MODEL,
-        temperature: float = MODEL_TEMPERATURE,
-        top_p: float = MODEL_TOP_P,
-        num_ctx: int = MODEL_NUM_CTX,
-        num_predict: int = MODEL_NUM_PREDICT,
-        streaming: bool = True,
-        **kwargs
+    model: str = DEFAULT_LLM_MODEL,
+    temperature: float = MODEL_TEMPERATURE,
+    top_p: float = MODEL_TOP_P,
+    num_ctx: int = MODEL_NUM_CTX,
+    num_predict: int = MODEL_NUM_PREDICT,
+    streaming: bool = True,
+    **kwargs,
 ) -> Optional[OllamaLLM]:
     """
     初始化并返回Ollama模型实例
@@ -48,69 +58,90 @@ def get_llm(
             "num_predict": num_predict,
             "num_thread": MODEL_NUM_THREAD,
             "callbacks": callbacks,
-            **kwargs
+            **kwargs,
         }
 
         shared.llm_model = OllamaLLM(**model_kwargs)
-        print(f"成功初始化Ollama模型: {model}")
         return shared.llm_model
 
     except Exception as e:
-        print(f"初始化模型时出错: {str(e)}")
-        import traceback
-        print(traceback.format_exc())
+        print(f"initialing llm error: {str(e)}")
         return None
 
 
-def get_device():  
-    import torch  
-    if torch.cuda.is_available():  
-        return 'cuda'  
-    return 'cpu'  
+def get_device():
+    import torch
+
+    if torch.cuda.is_available():
+        return "cuda"
+    return "cpu"
 
 
 def get_embeddings(
-        model_name: str = DEFAULT_EMBEDDING_MODEL, 
-        force_reload=False
-) -> Optional[Embeddings]:  
+    model_name: str = DEFAULT_EMBEDDING_MODEL, force_reload=False
+) -> Optional[Embeddings]:
 
-    if shared.embedding_model is not None and not force_reload:  
-        return shared.embedding_model  
-    
-    try:  
-        import os  
-        from langchain_huggingface import HuggingFaceEmbeddings  
-        
-        # 设置固定的模型缓存目录  
-        current_dir = os.path.dirname(os.path.abspath(__file__))  
-        app_root = os.path.dirname(current_dir)  
-        cache_dir = os.path.join(app_root, "models_cache")  
-        os.makedirs(cache_dir, exist_ok=True)  
-        
-        # 设置环境变量确保使用指定缓存目录  
-        os.environ["HF_HOME"] = cache_dir  # 只使用新的环境变量名  
+    if "/" not in model_name:
+        error_msg = (
+            f"Error: invalid model name '{model_name}', use org_name/model_name format"
+        )
+        print(error_msg)
+        sys.exit(1)
 
-        device = get_device()  
-        model_kwargs = {'device': device}  
-        encode_kwargs = {'normalize_embeddings': True}  
-        
-        shared.embedding_model = HuggingFaceEmbeddings(  
-            model_name=model_name,  
-            model_kwargs=model_kwargs,  
-            encode_kwargs=encode_kwargs,  
-            cache_folder=cache_dir  
-        )  
-        
-        return shared.embedding_model   
-    except Exception as e:  
-        print(f"fail to load embedding model: {str(e)}")  
-        import traceback  
-        traceback.print_exc()  
-        return None  
+    if (
+        not force_reload
+        and shared.embedding_model is not None
+        and hasattr(shared, "current_model_name")
+        and shared.current_model_name == model_name
+    ):
+        print(f"loaded embedding model: {shared.current_model_name}")
+        return shared.embedding_model
 
+    try:
+        app_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        cache_dir = os.path.join(app_root, "models_cache")
+        os.makedirs(cache_dir, exist_ok=True)
+        os.environ["HF_HOME"] = cache_dir
 
-llm = get_llm()
-if llm is None:
-    print("默认LLM模型初始化失败")
-else:
-    print("默认LLM模型初始化成功")
+        org_name, model_short_name = model_name.split("/")
+        model_dir_name = f"models--{org_name}--{model_short_name}".replace("/", "--")
+        model_base_path = os.path.join(cache_dir, model_dir_name)
+        local_model_path = None
+
+        if os.path.exists(model_base_path):
+            snapshots_dir = os.path.join(model_base_path, "snapshots")
+            if os.path.exists(snapshots_dir):
+                snapshot_dirs = glob.glob(os.path.join(snapshots_dir, "*"))
+                for snapshot_dir in snapshot_dirs:
+                    config_path = os.path.join(snapshot_dir, "config.json")
+                    if os.path.exists(config_path):
+                        local_model_path = snapshot_dir
+                        print(f"local embedding model: {local_model_path}")
+                        break
+
+        device = get_device()
+        model_kwargs = {"device": device}
+        encode_kwargs = {"normalize_embeddings": True}
+
+        if local_model_path:
+            shared.embedding_model = HuggingFaceEmbeddings(
+                model_name=local_model_path,
+                model_kwargs=model_kwargs,
+                encode_kwargs=encode_kwargs,
+            )
+        else:
+            print(f"downloading: {model_name}")
+            shared.embedding_model = HuggingFaceEmbeddings(
+                model_name=model_name,
+                model_kwargs=model_kwargs,
+                encode_kwargs=encode_kwargs,
+                cache_folder=cache_dir,
+            )
+
+        shared.current_model_name = model_name
+        return shared.embedding_model
+
+    except Exception as e:
+        print(f"embedding model error: {str(e)}")
+
+    return None
