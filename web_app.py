@@ -1,6 +1,8 @@
+import re
 from flask_cors import CORS
 import os
 import sys
+import json
 from flask import (
     Flask,
     request,
@@ -9,72 +11,77 @@ from flask import (
     Response,
     stream_with_context,
 )
-import json
-import time
 
-# 确保应用模块可导入
+
+from app.config import SEARCH_K
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 app = Flask(__name__, template_folder="web/templates", static_folder="web/static")
-CORS(app)  # 允许跨域请求
+CORS(app)
 
-# 存储全局变量
 global_qa_chain = None
 global_vector_db = None
 
 
 @app.route("/")
 def index():
-    """提供主页"""
     return render_template("index.html")
 
 
 @app.route("/api/query/stream", methods=["POST", "GET"])
 def stream_query_knowledge_base():
-    """流式处理知识库查询"""
+    """Stream processing of knowledge base queries"""
     if not global_qa_chain:
-        return jsonify({"status": "error", "message": "知识库未初始化，请先构建知识库"})
+        return jsonify(
+            {
+                "status": "error",
+                "message": "The knowledge base is not initialized. Please build it first",
+            }
+        )
 
-        # 从POST或GET参数获取查询
     if request.method == "POST":
         data = request.get_json()
         query = data.get("query", "")
-    else:  # GET
+    else:
         query = request.args.get("q", "")
 
     if not query.strip():
-        return jsonify({"status": "error", "message": "查询内容不能为空"})
+        return jsonify({"status": "error", "message": "Query content cannot be empty"})
+
+    def is_significant_overlap(text1, text2, overlap_threshold=0.4):
+        norm_text1 = re.sub(r"\s+", "", text1).lower()
+        norm_text2 = re.sub(r"\s+", "", text2).lower()
+
+        shorter = norm_text1 if len(norm_text1) <= len(norm_text2) else norm_text2
+        longer = norm_text2 if len(norm_text1) <= len(norm_text2) else norm_text1
+
+        max_match_length = 0
+        for i in range(len(shorter)):
+            for j in range(i + 1, len(shorter) + 1):
+                substring = shorter[i:j]
+                if len(substring) > 30 and substring in longer:
+                    max_match_length = max(max_match_length, len(substring))
+
+        overlap_ratio = max_match_length / len(shorter)
+        return overlap_ratio >= overlap_threshold
 
     def generate():
-        # 修改LLM回调处理以支持流式输出
-        class StreamingCallback:
-            def __init__(self):
-                self.text = ""
-
-            def on_llm_new_token(self, token, **kwargs):
-                self.text += token
-                # 发送当前片段作为SSE事件
-                yield f"data: {json.dumps({'type': 'token', 'token': token})}\n\n"
-
         from app.core.model_utils import get_llm
         from app.core.document_processor import get_vector_store
-        from app.core.retrieval_chain import create_qa_chain
-
-        # 创建流式回调
-        streaming_callback = StreamingCallback()
 
         try:
-            # 获取相关文档
+            # Get relevant documents
             vector_db = get_vector_store()
-            docs = vector_db.similarity_search(query, k=3)
+            docs = vector_db.similarity_search(query, k=SEARCH_K)
 
-            # 构建上下文
+            # Build context
             context = "\n\n".join([doc.page_content for doc in docs])
 
-            # 获取带流式回调的LLM
+            # Get LLM with streaming callback
             streaming_llm = get_llm(streaming=True)
 
-            # 构建提示
+            # Build prompt
             from app.core.retrieval_chain import FINANCE_QA_PROMPT_TEMPLATE
             from langchain_core.prompts import PromptTemplate
 
@@ -83,36 +90,38 @@ def stream_query_knowledge_base():
                 input_variables=["context", "question"],
             )
 
-            # 准备源文档信息但暂不发送 - 修改为基于内容去重
+            # Prepare source document information but do not send yet - modified for content deduplication
             sources = []
-            unique_contents = set()  # 用于跟踪已添加的文档内容
+            has_significant_overlap = False
 
-            for doc in docs[:3]:
+            for doc in docs:
                 content = doc.page_content.strip()
                 source_name = (
-                    doc.metadata.get("source", "未知")
+                    doc.metadata.get("source", "unknown")
                     if hasattr(doc, "metadata")
-                    else "未知"
+                    else "unknown"
                 )
 
-                # 如果这个内容还没有添加过，才添加它
-                if content not in unique_contents:
+                has_significant_overlap = False
+                for existing_source in sources:
+                    if is_significant_overlap(content, existing_source["content"]):
+                        has_significant_overlap = True
+                        break
+
+                if not has_significant_overlap:
                     source = {"content": content, "source": source_name}
                     sources.append(source)
-                    unique_contents.add(content)
 
-            # 构建完整提示
             full_prompt = prompt.format(context=context, question=query)
 
-            # 启动流式生成 - 使用callback流式处理
+            # Start streaming generation - use callback for streaming processing
             for chunk in streaming_llm.stream(full_prompt):
                 yield f"data: {json.dumps({'type': 'token', 'token': chunk})}\n\n"
-                time.sleep(0.01)
 
-            # 文本生成完成后，发送源文档信息
+            # After text generation completes, send source documents information
             yield f"data: {json.dumps({'type': 'sources', 'sources': sources})}\n\n"
 
-            # 发送完成信号
+            # Send completion signal
             yield f"data: {json.dumps({'type': 'end'})}\n\n"
 
         except Exception as e:
@@ -128,7 +137,6 @@ def stream_query_knowledge_base():
 
 @app.route("/api/rebuild", methods=["POST"])
 def rebuild_knowledge_base():
-    """重建知识库"""
     global global_qa_chain, global_vector_db
 
     try:
@@ -138,11 +146,23 @@ def rebuild_knowledge_base():
         success = build_knowledge_base()
         if success:
             global_qa_chain = create_qa_chain()
-            return jsonify({"status": "success", "message": "知识库重建成功"})
+            return jsonify(
+                {
+                    "status": "success",
+                    "message": "The knowledge base was rebuilt successfully",
+                }
+            )
         else:
-            return jsonify({"status": "error", "message": "知识库重建失败"})
+            return jsonify(
+                {"status": "error", "message": "Failed to rebuild the knowledge base"}
+            )
     except Exception as e:
-        return jsonify({"status": "error", "message": f"重建知识库失败: {str(e)}"})
+        return jsonify(
+            {
+                "status": "error",
+                "message": f"Failed to rebuild the knowledge base: {str(e)}",
+            }
+        )
 
 
 @app.route("/api/documents", methods=["GET"])
@@ -200,7 +220,9 @@ def init_app():
 
         embeddings = get_embeddings()
         if not embeddings:
-            print("无法加载嵌入模型，应用可能无法正常工作")
+            print(
+                "Unable to load the embedding model. The application may not function properly."
+            )
             return
 
         global_vector_db = get_vector_store(embeddings)
@@ -219,16 +241,22 @@ def init_app():
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="启动金融知识库Web应用")
-    parser.add_argument("--port", type=int, default=5000, help="Web服务端口")
-    parser.add_argument("--model", type=str, default="deepseek-r1:14b", help="llm")
+    parser = argparse.ArgumentParser(
+        description="Launch the Knowledge Base Web Application"
+    )
+    parser.add_argument(
+        "--port", type=int, default=5000, help="Port for the web service"
+    )
+    parser.add_argument(
+        "--model", type=str, default="deepseek-r1:14b", help="Large language model"
+    )
     parser.add_argument(
         "--embedding-model",
         type=str,
-        default="sentence-transformers/all-mpnet-base-v2",
+        default="BAAI/bge-base-zh-v1.5",
         help="embedding model",
     )
-    parser.add_argument("--num-threads", type=int, default=4, help="threads number")
+    parser.add_argument("--num-threads", type=int, default=12, help="threads number")
     args = parser.parse_args()
 
     os.environ["DEFAULT_MODEL"] = args.model
@@ -237,5 +265,5 @@ if __name__ == "__main__":
 
     init_app()
 
-    print(f"启动Web服务在 http://localhost:{args.port}")
+    print(f"Starting web service at http://localhost:{args.port}")
     app.run(host="0.0.0.0", port=args.port, debug=False)

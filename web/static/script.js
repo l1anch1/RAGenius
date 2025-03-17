@@ -1,13 +1,13 @@
-document.addEventListener('DOMContentLoaded', function() {  
-    // 获取DOM元素  
-    const tabButtons = document.querySelectorAll('.tab-btn');  
-    const tabPanes = document.querySelectorAll('.tab-pane');  
-
-    // 系统信息元素  
+document.addEventListener('DOMContentLoaded', function() {
+    // Get DOM elements
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabPanes = document.querySelectorAll('.tab-pane');
+    
+    // System information elements  
     const modelInfoElement = document.getElementById('model-info');  
     const warningMessage = document.getElementById('warning-message');  
-
-    // 查询相关元素  
+    
+    // Query related elements  
     const queryInput = document.getElementById('query-input');  
     const queryBtn = document.getElementById('query-btn');  
     const queryLoading = document.getElementById('query-loading');  
@@ -15,55 +15,55 @@ document.addEventListener('DOMContentLoaded', function() {
     const answerContent = document.getElementById('answer-content');  
     const sourcesList = document.getElementById('sources-list');  
     const sourcesBox = document.getElementById('sources-box');  
-
-    // 重建知识库相关元素  
+    
+    // Rebuild knowledge base related elements  
     const rebuildBtn = document.getElementById('rebuild-btn');  
     const rebuildLoading = document.getElementById('rebuild-loading');  
     const rebuildSuccess = document.getElementById('rebuild-success');  
     const rebuildError = document.getElementById('rebuild-error');  
-
-    // 文档列表相关元素  
+    
+    // Document list related elements  
     const refreshDocsBtn = document.getElementById('refresh-docs-btn');  
     const documentsLoading = document.getElementById('documents-loading');  
     const documentsList = document.getElementById('documents-list');  
     const noDocumentsMessage = document.getElementById('no-documents-message');  
-
-    // 系统状态  
+    
+    // System status  
     let isInitialized = false;  
-
-    // 切换选项卡  
+    
+    // Switch tabs  
     tabButtons.forEach(button => {  
         button.addEventListener('click', function() {  
-            // 移除所有active类  
+            // Remove all active classes  
             tabButtons.forEach(btn => btn.classList.remove('active'));  
             tabPanes.forEach(pane => pane.classList.remove('active'));  
-
-            // 为当前选项卡添加active类  
+    
+            // Add active class to current tab  
             button.classList.add('active');  
             const tabId = button.getAttribute('data-tab');  
             document.getElementById(tabId).classList.add('active');  
-
-            // 如果切换到文档列表标签，自动刷新列表  
+    
+            // If switching to documents list tab, automatically refresh the list  
             if (tabId === 'documents') {  
                 fetchDocuments();  
             }  
         });  
     });  
-
-    // 获取系统信息  
+    
+    // Get system information  
     async function fetchSystemInfo() {  
         try {  
             const response = await fetch('/api/info');  
             const data = await response.json();  
-
+    
             if (data.status === 'success') {  
-                modelInfoElement.textContent = `模型: ${data.model}  |  嵌入模型: ${data.embedding_model}  |  线程数: ${data.threads}`;  
+                modelInfoElement.textContent = `Model: ${data.model}  |  Embedding Model: ${data.embedding_model}  |  Threads: ${data.threads}`;  
                 isInitialized = data.initialized;  
-
-                // 根据初始化状态显示或隐藏警告  
+    
+                // Show or hide warning based on initialization status  
                 warningMessage.style.display = isInitialized ? 'none' : 'block';  
-
-                // 根据初始化状态禁用或启用查询按钮  
+    
+                // Disable or enable query button based on initialization status  
                 queryBtn.disabled = !isInitialized;  
                 if (!isInitialized) {  
                     queryBtn.style.backgroundColor = "#a0aec0";  
@@ -72,52 +72,56 @@ document.addEventListener('DOMContentLoaded', function() {
                 }  
             }  
         } catch (error) {  
-            console.error('获取系统信息失败:', error);  
-            modelInfoElement.textContent = '系统连接失败';  
+            console.error('Failed to get system information:', error);  
+            modelInfoElement.textContent = 'System connection failed';  
         }  
     }  
-
-    // 流式查询 - 使用定时批量渲染  
+    
+    // Stream query - using timed batch rendering  
     async function sendStreamQuery() {  
         const query = queryInput.value.trim();  
         if (!query) return;  
     
-        // 清空之前的结果并显示加载状态  
+        // Clear previous results and show loading status  
         answerContent.innerHTML = '';  
         sourcesList.innerHTML = '';  
         sourcesBox.style.display = 'none';  
         queryLoading.style.display = 'flex';  
         resultsDiv.style.display = 'none';  
     
-        // 用于存储源文档信息但不立即显示  
+        // Store source document information but don't display immediately  
         let sourcesData = [];  
         
-        // 用于存储Markdown文本的缓冲区  
+        // Buffer for storing Markdown text  
         let markdownBuffer = '';  
         
-        // 定时渲染相关变量  
+        // Timer-related variables for rendering  
         let renderTimer = null;  
-        const RENDER_INTERVAL = 300; // 毫秒  
+        const RENDER_INTERVAL = 30; // milliseconds  
         
-        // 添加强制渲染计时器  
+        // Add forced rendering timer  
         let forceRenderTimer = null;  
-        const FORCE_RENDER_INTERVAL = 100; // 强制每2秒渲染一次，避免长时间不渲染  
+        const FORCE_RENDER_INTERVAL = 10; // Force render every 2 seconds to avoid long periods without rendering  
         
-        // 上次渲染的时间戳  
+        // Timestamp of last render  
         let lastRenderTime = 0;  
         
-        // 渲染函数，避免代码重复  
+        // Render function to avoid code duplication  
         function renderMarkdown() {  
             if (markdownBuffer.trim()) {  
-                answerContent.innerHTML = marked.parse(markdownBuffer);  
+                let processedMarkdown = markdownBuffer  
+                    .replace(/<think>([\s\S]*?)<\/think>/g,   
+                             '<div class="thinking-block">$1</div>')  
+                             
+                answerContent.innerHTML = marked.parse(processedMarkdown);  
                 lastRenderTime = Date.now();  
-            }  
+            }   
         }  
         
-        // 设置强制定期渲染计时器  
+        // Set up forced periodic rendering timer  
         function setupForceRenderTimer() {  
             forceRenderTimer = setInterval(() => {  
-                // 如果距离上次渲染已超过强制间隔，则强制渲染  
+                // Force render if time since last render exceeds the forced interval  
                 const now = Date.now();  
                 if (now - lastRenderTime >= FORCE_RENDER_INTERVAL) {  
                     renderMarkdown();  
@@ -126,20 +130,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }  
     
         try {  
-            // 创建SSE连接  
+            // Create SSE connection  
             const eventSource = new EventSource(`/api/query/stream?q=${encodeURIComponent(query)}`);  
             
-            // 首次收到消息时隐藏加载状态并显示结果区域  
+            // Hide loading status and show results area when first message is received  
             let firstMessageReceived = false;  
             
-            // 设置强制渲染定时器  
+            // Set up forced rendering timer  
             setupForceRenderTimer();  
             
-            // 记录初始渲染时间  
+            // Record initial render time  
             lastRenderTime = Date.now();  
     
             eventSource.onmessage = function(event) {  
-                // 第一条消息处理  
+                // First message handling  
                 if (!firstMessageReceived) {  
                     queryLoading.style.display = 'none';  
                     resultsDiv.style.display = 'block';  
@@ -149,41 +153,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = JSON.parse(event.data);  
     
                 if (data.type === 'token') {  
-                    // 将token添加到缓冲区  
+                    // Add token to buffer  
                     markdownBuffer += data.token;  
                     
-                    // 清除先前的渲染定时器  
+                    // Clear previous render timer  
                     if (renderTimer) clearTimeout(renderTimer);  
                     
-                    // 设置新的定时器  
+                    // Set new timer  
                     renderTimer = setTimeout(() => {  
                         renderMarkdown();  
                     }, RENDER_INTERVAL);  
                     
-                    // 记录收到token的时间，可用于调试  
-                    // console.log("Token received at:", Date.now());  
                 }  
                 else if (data.type === 'sources') {  
                     sourcesData = data.sources;  
                 }  
                 else if (data.type === 'error') {  
-                    answerContent.innerHTML = `<div class="error-message">错误: ${data.error}</div>`;  
+                    answerContent.innerHTML = `<div class="error-message">Error: ${data.error}</div>`;  
                     
-                    // 清理定时器  
+                    // Clean up timers  
                     if (renderTimer) clearTimeout(renderTimer);  
                     if (forceRenderTimer) clearInterval(forceRenderTimer);  
                     
                     eventSource.close();  
                 }  
                 else if (data.type === 'end') {  
-                    // 流结束时，立即进行最终渲染  
+                    // Perform final render immediately when stream ends  
                     renderMarkdown();  
                     
-                    // 清理定时器  
+                    // Clean up timers  
                     if (renderTimer) clearTimeout(renderTimer);  
                     if (forceRenderTimer) clearInterval(forceRenderTimer);  
                     
-                    // 显示源文档  
+                    // Display source documents  
                     if (sourcesData.length > 0) {  
                         sourcesList.innerHTML = '';  
                         sourcesData.forEach((source, index) => {  
@@ -192,7 +194,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
                             const sourceTitle = document.createElement('div');  
                             sourceTitle.className = 'source-title';  
-                            sourceTitle.textContent = `来源 ${index + 1}: ${source.source}`;  
+                            sourceTitle.textContent = `Source ${index + 1}: ${source.source}`;  
     
                             const sourceContent = document.createElement('div');  
                             sourceContent.className = 'source-content';  
@@ -217,9 +219,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('EventSource error:', error);  
                 queryLoading.style.display = 'none';  
                 resultsDiv.style.display = 'block';  
-                answerContent.innerHTML += '<div class="error-message">连接错误，请重试</div>';  
+                answerContent.innerHTML += '<div class="error-message">Connection error, please try again</div>';  
                 
-                // 清理定时器  
+                // Clean up timers  
                 if (renderTimer) clearTimeout(renderTimer);  
                 if (forceRenderTimer) clearInterval(forceRenderTimer);  
                 
@@ -227,40 +229,40 @@ document.addEventListener('DOMContentLoaded', function() {
             };  
     
         } catch (error) {  
-            console.error('查询处理失败:', error);  
+            console.error('Query processing failed:', error);  
             queryLoading.style.display = 'none';  
             resultsDiv.style.display = 'block';  
-            answerContent.innerHTML = `<div class="error-message">查询处理失败: ${error.message}</div>`;  
+            answerContent.innerHTML = `<div class="error-message">Query processing failed: ${error.message}</div>`;  
             
-            // 确保清理定时器  
+            // Ensure timers are cleaned up  
             if (renderTimer) clearTimeout(renderTimer);  
             if (forceRenderTimer) clearInterval(forceRenderTimer);  
         }  
     }  
-    // 重建知识库  
+    // Rebuild knowledge base  
     async function rebuildKnowledgeBase() {  
-        // 显示加载，隐藏消息  
+        // Show loading, hide messages  
         rebuildLoading.style.display = 'flex';  
         rebuildSuccess.style.display = 'none';  
         rebuildError.style.display = 'none';  
         rebuildBtn.disabled = true;  
-
+    
         try {  
             const response = await fetch('/api/rebuild', {  
                 method: 'POST'  
             });  
-
+    
             const data = await response.json();  
-
-            // 隐藏加载  
+    
+            // Hide loading  
             rebuildLoading.style.display = 'none';  
             rebuildBtn.disabled = false;  
-
+    
             if (data.status === 'success') {  
                 rebuildSuccess.textContent = data.message;  
                 rebuildSuccess.style.display = 'block';  
-
-                // 重新获取系统信息  
+    
+                // Refresh system information  
                 fetchSystemInfo();  
             } else {  
                 rebuildError.textContent = data.message;  
@@ -269,41 +271,41 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {  
             rebuildLoading.style.display = 'none';  
             rebuildBtn.disabled = false;  
-            console.error('重建知识库失败:', error);  
-
-            rebuildError.textContent = '重建知识库失败，请检查网络连接';  
+            console.error('Failed to rebuild knowledge base:', error);  
+    
+            rebuildError.textContent = 'Failed to rebuild knowledge base, please check network connection';  
             rebuildError.style.display = 'block';  
         }  
     }  
-
-    // 获取文档列表  
+    
+    // Get document list  
     async function fetchDocuments() {  
-        // 显示加载，隐藏列表和消息  
+        // Show loading, hide list and messages  
         documentsLoading.style.display = 'flex';  
         documentsList.innerHTML = '';  
         noDocumentsMessage.style.display = 'none';  
-
+    
         try {  
             const response = await fetch('/api/documents');  
             const data = await response.json();  
-
-            // 隐藏加载  
+    
+            // Hide loading  
             documentsLoading.style.display = 'none';  
-
+    
             if (data.status === 'success') {  
                 if (data.documents && data.documents.length > 0) {  
                     data.documents.forEach(doc => {  
                         const docItem = document.createElement('div');  
                         docItem.className = 'document-item';  
-
-                        // 简单文件图标  
+    
+                        // Simple file icon  
                         const docIcon = document.createElement('span');  
                         docIcon.className = 'document-icon';  
                         docIcon.innerHTML = '📄';  
-
+    
                         const docName = document.createElement('span');  
                         docName.textContent = doc;  
-
+    
                         docItem.appendChild(docIcon);  
                         docItem.appendChild(docName);  
                         documentsList.appendChild(docItem);  
@@ -312,24 +314,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     noDocumentsMessage.style.display = 'block';  
                 }  
             } else {  
-                alert(`获取文档列表失败: ${data.message}`);  
+                alert(`Failed to get document list: ${data.message}`);  
             }  
         } catch (error) {  
             documentsLoading.style.display = 'none';  
-            console.error('获取文档列表失败:', error);  
-            alert('获取文档列表失败，请检查网络连接');  
+            console.error('Failed to get document list:', error);  
+            alert('Failed to get document list, please check network connection');  
         }  
     }  
-
-    // 事件监听器 - 只使用流式查询  
+    
+    // Event listeners - only use streaming query  
     queryBtn.addEventListener('click', sendStreamQuery);  
     queryInput.addEventListener('keypress', function(e) {  
         if (e.key === 'Enter') sendStreamQuery();  
     });  
-
+    
     rebuildBtn.addEventListener('click', rebuildKnowledgeBase);  
     refreshDocsBtn.addEventListener('click', fetchDocuments);  
-
-    // 初始化页面  
+    
+    // Initialize page  
     fetchSystemInfo();  
-});  
+});

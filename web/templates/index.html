@@ -1,86 +1,87 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en-US">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>金融知识库系统</title>
+    <title>Knowledge Base System</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
 <body>
     <div class="container">
         <header>
-            <h1>金融知识库系统</h1>
+            <h1>Knowledge Base System</h1>
             <div class="system-info">
-                <span id="model-info">模型: 加载中...</span>
+                <span id="model-info">Model: Loading...</span>
             </div>
         </header>
 
         <div class="tabs">
-            <button class="tab-btn active" data-tab="query">查询知识库</button>
-            <button class="tab-btn" data-tab="rebuild">重建知识库</button>
-            <button class="tab-btn" data-tab="documents">文档列表</button>
+            <button class="tab-btn active" data-tab="query">Query Knowledge Base</button>
+            <button class="tab-btn" data-tab="rebuild">Rebuild Knowledge Base</button>
+            <button class="tab-btn" data-tab="documents">Document List</button>
         </div>
 
         <div class="tab-content">
-            <!-- 查询知识库 -->
+            <!-- Query Knowledge Base -->
             <div class="tab-pane active" id="query">
                 <div class="not-initialized-warning" id="warning-message" style="display: none;">
-                    警告: 知识库未初始化，请先重建知识库
+                    Warning: The knowledge base is not initialized. Please rebuild it first.
                 </div>
 
                 <div class="search-box">
-                    <input type="text" id="query-input" placeholder="请输入您的问题...">
-                    <button id="query-btn">查询</button>
+                    <input type="text" id="query-input" placeholder="Please enter your question...">
+                    <button id="query-btn">Query</button>
                 </div>
 
                 <div class="loading" id="query-loading" style="display: none;">
                     <div class="spinner"></div>
-                    <p>处理查询中...</p>
+                    <p>Processing query...</p>
                 </div>
 
                 <div class="results" id="results" style="display: none;">
                     <div class="answer-box">
-                        <h3>回答:</h3>
+                        <h3>Answer:</h3>
                         <div id="answer-content"></div>
                     </div>
 
                     <div class="sources-box" id="sources-box">
-                        <h3>参考来源:</h3>
+                        <h3>Reference Sources:</h3>
                         <div id="sources-list"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- 重建知识库 -->
+            <!-- Rebuild Knowledge Base -->
             <div class="tab-pane" id="rebuild">
-                <p>重建知识库将重新处理所有文档并更新向量数据库。这个过程可能需要几分钟时间。</p>
-                <button id="rebuild-btn" class="primary-btn">开始重建知识库</button>
+                <p>Rebuilding the knowledge base will reprocess all documents and update the vector database. This
+                    process may take several minutes.</p>
+                <button id="rebuild-btn" class="primary-btn">Start Rebuilding Knowledge Base</button>
 
                 <div class="loading" id="rebuild-loading" style="display: none;">
                     <div class="spinner"></div>
-                    <p>正在重建知识库...</p>
+                    <p>Rebuilding knowledge base...</p>
                 </div>
 
                 <div class="message-box success" id="rebuild-success" style="display: none;"></div>
                 <div class="message-box error" id="rebuild-error" style="display: none;"></div>
             </div>
 
-            <!-- 文档列表 -->
+            <!-- Document List -->
             <div class="tab-pane" id="documents">
-                <h3>知识库文档</h3>
-                <button id="refresh-docs-btn" class="small-btn">刷新列表</button>
+                <h3>Knowledge Base Documents</h3>
+                <button id="refresh-docs-btn" class="small-btn">Refresh List</button>
 
                 <div class="loading" id="documents-loading" style="display: none;">
                     <div class="spinner"></div>
                 </div>
 
                 <div id="documents-list" class="documents-list">
-                    <!-- 文档列表将在这里显示 -->
+                    <!-- Document list will be displayed here -->
                 </div>
                 <div id="no-documents-message" class="no-documents" style="display: none;">
-                    知识库中没有文档
+                    There are no documents in the knowledge base
                 </div>
             </div>
         </div>

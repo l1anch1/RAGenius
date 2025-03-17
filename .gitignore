@@ -35,7 +35,7 @@ vectorstore/
  
 app/models_cache/*    
 !app/models_cache/.gitkeep  
-
+app/core/debug_tool.py
 
   
 .DS_Store  

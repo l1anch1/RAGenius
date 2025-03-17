@@ -1,6 +1,10 @@
-# DeepSeek-RAG: Advanced Knowledge Orchestration Platform
-A sophisticated question-answering system architected on Langchain's robust framework and powered by DeepSeek's large language models. Leveraging Retrieval Augmented Generation (RAG) methodology, this platform seamlessly integrates proprietary domain knowledge with generative AI capabilities, delivering unparalleled accuracy and contextual relevance in specialized information retrieval scenarios.
+# DeepSeek-RAG: Advanced Knowledge Retrieval Platform
 
+A sophisticated QA system architected on Langchain's robust framework and powered by DeepSeek's large language models. Leveraging Retrieval Augmented Generation (RAG) methodology, this platform seamlessly integrates proprietary domain knowledge with generative AI capabilities, delivering high accuracy and contextual relevance in specialized information retrieval scenarios.
+<br>
+
+![demo](assets/images/1.png)
+![demo](assets/images/2.png)
 # Features
 - Document-Grounded Responses: DeepSeek learns from your documents to provide better, more accurate answers
 - Source Transparency: All answers include references to source documents for verification
@@ -41,17 +45,21 @@ deepseek-rag
 │ └── vectordb 
 │
 ├── scripts/
-│ ├── build_kb.py
 │ └── test_model.py
 │
+├── assets/
+│ └── images
+|
 ├── web_app.py 
+│
 └── requirements.txt 
 ```
 
 # Installation
 1. Clone the repository:
 ```
-git clone https://github.com/delete3GM/DeepSeek-RAG
+git clone https://github.com/delete3GM/DeepSeek-RAG.git
+cd DeepSeek-RAG
 ```
  
 2. Create and activate a virtual environment (recommended):
@@ -64,7 +72,7 @@ conda create -n deepseek_rag python=3.11
 pip install -r requirements.txt 
 ``` 
 
-4. Install Ollama following instructions at ollama.ai
+4. Install Ollama following instructions at <https://ollama.com/>
 
 5. Pull the DeepSeek model:
 ```
@@ -79,7 +87,6 @@ python ./scripts/test_model.py
 
 2. Place your documents in the data/documents directory
 - Supported formats: PDF, TXT, CSV
-- Financial documents work best with this system
 
 3. Start the web application:
 ```
@@ -93,3 +100,10 @@ python web_app.py
 6. Ask questions in the query box and receive document-grounded answers
 
 
+# Developer Guide
+If you want to contribute to the project, please follow these steps:
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request

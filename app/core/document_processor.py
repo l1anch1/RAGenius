@@ -1,9 +1,9 @@
 import os
+import re
 from typing import List, Optional
 from pathlib import Path
 from langchain_community.document_loaders import PyPDFLoader, CSVLoader, TextLoader
 from langchain_core.documents import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 
 from app.core.model_utils import get_embeddings
@@ -14,14 +14,9 @@ import app.core.shared_instances as shared
 def load_documents(directory_path: str = DOCUMENTS_DIR) -> List[Document]:
     documents = []
     directory = Path(directory_path)
-
-    if not directory.exists() or not directory.is_dir():
-        return documents
+    os.makedirs(directory, exist_ok=True)
 
     for file_path in directory.iterdir():
-        if not file_path.is_file() or file_path.name == ".gitkeep":
-            continue
-
         try:
             if file_path.suffix.lower() == ".pdf":
                 loader = PyPDFLoader(str(file_path))
@@ -32,7 +27,6 @@ def load_documents(directory_path: str = DOCUMENTS_DIR) -> List[Document]:
             elif file_path.suffix.lower() == ".txt":
                 loader = TextLoader(str(file_path), encoding="utf-8")
                 documents.extend(loader.load())
-
         except Exception as e:
             print("Unexpected error:", e)
             pass
@@ -40,78 +34,151 @@ def load_documents(directory_path: str = DOCUMENTS_DIR) -> List[Document]:
     return documents
 
 
-def process_documents(documents: List[Document]) -> List[Document]:
+def process_documents(documents: List[Document], debug: bool = True) -> List[Document]:
+    """
+    split documents into chunks of text with a maximum size of CHUNK_SIZE
+    """
     if not documents:
         return []
 
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=CHUNK_SIZE,
-        chunk_overlap=CHUNK_OVERLAP,
-        separators=["\n\n", "\n", "。", "!", "?", "！", "？", ".", " ", ""],
-        length_function=len,
+    chunks = []
+    sentence_endings = r"([。！？；.!?;])"
+
+    sorted_docs = sorted(
+        documents,
+        key=lambda doc: (doc.metadata.get("source", ""), doc.metadata.get("page", 0)),
     )
 
-    chunks = text_splitter.split_documents(documents)
+    last_incomplete_sentence = ""
+    last_doc_source = None
+    last_doc_page = -1
+
+    for doc in sorted_docs:
+        current_source = doc.metadata.get("source", "")
+        current_page = doc.metadata.get("page", 0)
+        text = doc.page_content
+
+        text = re.sub(r"([\u4e00-\u9fff])\s+([\u4e00-\u9fff])", r"\1\2", text)
+        # 如果有连续多个空格隔开的中文，多次应用正则表达式直到没有变化
+        old_text = ""
+        while old_text != text:
+            old_text = text
+            text = re.sub(r"([\u4e00-\u9fff])\s+([\u4e00-\u9fff])", r"\1\2", text)
+
+        # 2. 删除英文字符之间的空格数-1（已经实现）
+        text = re.sub(r" {2,}", lambda m: m.group(0)[1:], text)
+        is_continuation = (
+            last_doc_source == current_source
+            and last_doc_page == current_page - 1
+            and last_incomplete_sentence
+        )
+
+        parts = re.split(sentence_endings, text)
+
+        if is_continuation:
+            if parts and not re.match(sentence_endings, parts[0]):
+                parts[0] = last_incomplete_sentence + parts[0]
+                last_incomplete_sentence = ""
+
+        sentences = []
+        i = 0
+        while i < len(parts) - 1:
+            if i + 1 < len(parts):
+                sentence = parts[i] + parts[i + 1]
+                sentences.append(sentence)
+            i += 2
+
+        if i < len(parts) and parts[i].strip():
+            last_incomplete_sentence = parts[i]
+        else:
+            last_incomplete_sentence = ""
+
+        last_doc_source = current_source
+        last_doc_page = current_page
+
+        current_chunk = []
+        current_length = 0
+
+        for sentence in sentences:
+            sentence_length = len(sentence)
+
+            if sentence_length > CHUNK_SIZE:
+                if current_chunk:
+                    chunks.append(
+                        Document(
+                            page_content="".join(current_chunk), metadata=doc.metadata
+                        )
+                    )
+                    current_chunk = []
+                    current_length = 0
+
+                chunks.append(Document(page_content=sentence, metadata=doc.metadata))
+                continue
+
+            if current_length + sentence_length > CHUNK_SIZE and current_chunk:
+                chunks.append(
+                    Document(page_content="".join(current_chunk), metadata=doc.metadata)
+                )
+                current_chunk = []
+                current_length = 0
+
+            current_chunk.append(sentence)
+            current_length += sentence_length
+
+        if current_chunk:
+            chunks.append(
+                Document(page_content="".join(current_chunk), metadata=doc.metadata)
+            )
+
+    if last_incomplete_sentence and len(last_incomplete_sentence) <= CHUNK_SIZE:
+        if sorted_docs:
+            last_doc = sorted_docs[-1]
+            chunks.append(
+                Document(
+                    page_content=last_incomplete_sentence, metadata=last_doc.metadata
+                )
+            )
+    if debug:
+        print(f"generated {len(chunks)} chunks")
+        if chunks:
+            for i in range(16):
+                print(f"chunk #{i+1} (length {len(chunks[i].page_content)}):")
+                print(chunks[i].page_content)
+        else:
+            print("chunks generating failed")
+
     return chunks
 
 
 def create_vector_store(
     chunks: List[Document], embedding_model=None
 ) -> Optional[Chroma]:
+    """
+    Create a vector store from a list of documents.
+    """
     if not chunks:
         return None
-    try:
 
+    try:
         embeddings = get_embeddings()
         if embeddings is None:
-            return False
+            return None
 
-        if os.path.exists(VECTOR_DB_PATH):
-            print(f"检测到现有向量库: {VECTOR_DB_PATH}")
+        # Ensure the directory exists
+        os.makedirs(VECTOR_DB_PATH, exist_ok=True)
 
-            # 尝试清理现有的Chroma数据库
-            try:
-                # 释放可能存在的连接
-                import sqlite3
-                import gc
-
-                gc.collect()
-
-                # 尝试关闭所有可能的sqlite连接
-                sqlite_path = os.path.join(VECTOR_DB_PATH, "chroma.sqlite3")
-                if os.path.exists(sqlite_path):
-                    try:
-                        # 尝试创建一个临时连接并立即关闭，可能帮助释放锁
-                        conn = sqlite3.connect(sqlite_path)
-                        conn.close()
-                    except Exception as e:
-                        print(f"尝试操作数据库时出错: {str(e)}")
-
-                import time
-
-                time.sleep(1)
-
-                # 不删除整个目录，而是尝试创建/覆盖Collections
-                print("将使用现有目录但刷新数据")
-            except Exception as e:
-                print(f"清理过程中出错: {str(e)}")
-        else:
-            os.makedirs(VECTOR_DB_PATH, exist_ok=True)
-
-        # 创建或刷新向量库
+        # Create or update the vector store
         vector_db = Chroma.from_documents(
             documents=chunks,
-            embedding=embedding_model,
+            embedding=embeddings,
             persist_directory=VECTOR_DB_PATH,
         )
 
         print("向量库创建成功")
         return vector_db
+
     except Exception as e:
         print(f"创建向量库时出错: {str(e)}")
-        import traceback
-
-        traceback.print_exc()
         return None
 
 
@@ -121,7 +188,7 @@ def get_vector_store(force_reload: bool = False) -> Optional[Chroma]:
     try:
         embedding_model = get_embeddings()
         if embedding_model is None:
-            print("无法获取嵌入模型，向量数据库加载失败")
+            print("cannot load embedding model")
             return None
 
         if os.path.exists(VECTOR_DB_PATH):

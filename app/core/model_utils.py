@@ -9,6 +9,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.embeddings.base import Embeddings
 
 from app.config import (
+    DEVICE,
     DEFAULT_LLM_MODEL,
     DEFAULT_EMBEDDING_MODEL,
     MODEL_TEMPERATURE,
@@ -29,22 +30,6 @@ def get_llm(
     streaming: bool = True,
     **kwargs,
 ) -> Optional[OllamaLLM]:
-    """
-    初始化并返回Ollama模型实例
-
-    Args:
-        model: Ollama中的模型名称，默认为deepseek-r1:14b
-        temperature: 生成的随机性 (0.0-1.0)
-        top_p: 用于核采样的概率质量 (0.0-1.0)
-        num_ctx: 上下文窗口大小
-        num_predict: 单次调用生成的最大令牌数
-        streaming: 是否启用流式输出
-        **kwargs: 传递给Ollama的其他参数
-
-    Returns:
-        配置好的LLM实例或None (如果初始化失败)
-    """
-    # 配置回调
     callbacks = []
     if streaming and StreamingStdOutCallbackHandler is not None:
         callbacks.append(StreamingStdOutCallbackHandler())
@@ -69,14 +54,6 @@ def get_llm(
         return None
 
 
-def get_device():
-    import torch
-
-    if torch.cuda.is_available():
-        return "cuda"
-    return "cpu"
-
-
 def get_embeddings(
     model_name: str = DEFAULT_EMBEDDING_MODEL, force_reload=False
 ) -> Optional[Embeddings]:
@@ -94,7 +71,6 @@ def get_embeddings(
         and hasattr(shared, "current_model_name")
         and shared.current_model_name == model_name
     ):
-        print(f"loaded embedding model: {shared.current_model_name}")
         return shared.embedding_model
 
     try:
@@ -119,8 +95,7 @@ def get_embeddings(
                         print(f"local embedding model: {local_model_path}")
                         break
 
-        device = get_device()
-        model_kwargs = {"device": device}
+        model_kwargs = {"device": DEVICE}
         encode_kwargs = {"normalize_embeddings": True}
 
         if local_model_path:
@@ -129,6 +104,7 @@ def get_embeddings(
                 model_kwargs=model_kwargs,
                 encode_kwargs=encode_kwargs,
             )
+            print(f"loaded local model: {model_name}, divice: {DEVICE}")
         else:
             print(f"downloading: {model_name}")
             shared.embedding_model = HuggingFaceEmbeddings(
