@@ -1,6 +1,8 @@
 # Node.js dependencies
 frontend/node_modules/
 
+# Build artifacts
+data/vectordb/
 
 # Python dependencies
 *.pyc
