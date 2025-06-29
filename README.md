@@ -1,4 +1,4 @@
-# DeepSeek-RAG: Advanced Knowledge Retrieval Platform
+# RAGenius: Advanced Knowledge Retrieval Platform
 
 A sophisticated QA system architected on Langchain's robust framework and powered by DeepSeek's large language models and OpenAI API. Leveraging Retrieval Augmented Generation (RAG) methodology, this platform seamlessly integrates proprietary domain knowledge with generative AI capabilities, delivering high accuracy and contextual relevance in specialized information retrieval scenarios.
 <br>
@@ -140,3 +140,76 @@ If you want to contribute to the project, please follow these steps:
 
 # Contact
 For questions or support, please open an issue on the GitHub repository or contact the maintainer at <mailto:asherlii@outlook.com>.
+
+
+
+
+```
+RAGenius
+├─ .env
+├─ README.md
+├─ backend
+│  ├─ __init__.py
+│  ├─ __pycache__
+│  │  ├─ config.cpython-39.pyc
+│  │  └─ prompts.cpython-39.pyc
+│  ├─ app.py
+│  ├─ config.py
+│  ├─ core
+│  │  ├─ __init__.py
+│  │  ├─ __pycache__
+│  │  │  ├─ __init__.cpython-39.pyc
+│  │  │  ├─ document_processor.cpython-39.pyc
+│  │  │  ├─ model_utils.cpython-39.pyc
+│  │  │  ├─ retrieval_chain.cpython-39.pyc
+│  │  │  └─ shared_instances.cpython-39.pyc
+│  │  ├─ document_processor.py
+│  │  ├─ model_utils.py
+│  │  ├─ retrieval_chain.py
+│  │  └─ shared_instances.py
+│  ├─ models_cache
+│  ├─ prompts.py
+│  ├─ requirements.txt
+│  └─ routes
+│     ├─ __init__.py
+│     ├─ __pycache__
+│     │  ├─ __init__.cpython-39.pyc
+│     │  ├─ documents.cpython-39.pyc
+│     │  ├─ info.cpython-39.pyc
+│     │  ├─ query.cpython-39.pyc
+│     │  └─ rebuild.cpython-39.pyc
+│     ├─ documents.py
+│     ├─ info.py
+│     ├─ query.py
+│     └─ rebuild.py
+├─ data
+│  └─ documents
+├─ frontend
+│  ├─ eslint.config.js
+│  ├─ index.html
+│  ├─ package-lock.json
+│  ├─ package.json
+│  ├─ public
+│  │  ├─ images
+│  │  │  ├─ 1.png
+│  │  │  └─ 2.png
+│  │  └─ vite.svg
+│  ├─ src
+│  │  ├─ App.css
+│  │  ├─ App.jsx
+│  │  ├─ assets
+│  │  │  └─ react.svg
+│  │  ├─ components
+│  │  │  ├─ DocumentsTab.jsx
+│  │  │  ├─ KnowledgeBase.jsx
+│  │  │  ├─ QueryTab.jsx
+│  │  │  └─ RebuildTab.jsx
+│  │  ├─ index.css
+│  │  └─ main.jsx
+│  ├─ tailwind.config.js
+│  └─ vite.config.js
+├─ run.sh
+└─ scripts
+   └─ test_model.py
+
+```
