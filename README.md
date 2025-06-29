@@ -144,46 +144,34 @@ For questions or support, please open an issue on the GitHub repository or conta
 
 
 
+
 ```
 RAGenius
-├─ .env
 ├─ README.md
 ├─ backend
 │  ├─ __init__.py
-│  ├─ __pycache__
-│  │  ├─ config.cpython-39.pyc
-│  │  └─ prompts.cpython-39.pyc
 │  ├─ app.py
 │  ├─ config.py
 │  ├─ core
 │  │  ├─ __init__.py
-│  │  ├─ __pycache__
-│  │  │  ├─ __init__.cpython-39.pyc
-│  │  │  ├─ document_processor.cpython-39.pyc
-│  │  │  ├─ model_utils.cpython-39.pyc
-│  │  │  ├─ retrieval_chain.cpython-39.pyc
-│  │  │  └─ shared_instances.cpython-39.pyc
 │  │  ├─ document_processor.py
 │  │  ├─ model_utils.py
 │  │  ├─ retrieval_chain.py
 │  │  └─ shared_instances.py
+│  ├─ data
+│  │  └─ documents
 │  ├─ models_cache
 │  ├─ prompts.py
 │  ├─ requirements.txt
 │  └─ routes
 │     ├─ __init__.py
-│     ├─ __pycache__
-│     │  ├─ __init__.cpython-39.pyc
-│     │  ├─ documents.cpython-39.pyc
-│     │  ├─ info.cpython-39.pyc
-│     │  ├─ query.cpython-39.pyc
-│     │  └─ rebuild.cpython-39.pyc
 │     ├─ documents.py
 │     ├─ info.py
 │     ├─ query.py
 │     └─ rebuild.py
 ├─ data
 │  └─ documents
+│     └─ note.pdf
 ├─ frontend
 │  ├─ eslint.config.js
 │  ├─ index.html
@@ -200,14 +188,15 @@ RAGenius
 │  │  ├─ assets
 │  │  │  └─ react.svg
 │  │  ├─ components
-│  │  │  ├─ DocumentsTab.jsx
+│  │  │  ├─ DocumentsManageTab.jsx
 │  │  │  ├─ KnowledgeBase.jsx
-│  │  │  ├─ QueryTab.jsx
-│  │  │  └─ RebuildTab.jsx
+│  │  │  └─ QueryTab.jsx
 │  │  ├─ index.css
 │  │  └─ main.jsx
 │  ├─ tailwind.config.js
 │  └─ vite.config.js
+├─ package-lock.json
+├─ package.json
 ├─ run.sh
 └─ scripts
    └─ test_model.py
