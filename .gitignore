@@ -1,48 +1,35 @@
-# Python  
-__pycache__/  
-*.py[cod]  
-*$py.class  
-*.so  
-.Python  
-env/  
-build/  
-develop-eggs/  
-dist/  
-downloads/  
-eggs/  
-.eggs/  
-lib/  
-lib64/  
-parts/  
-sdist/  
-var/  
-*.egg-info/  
-.installed.cfg  
-*.egg  
-venv/  
-.env  
+# Node.js dependencies
+frontend/node_modules/
 
 
-*.bin  
-*.pt  
-*.db  
-*.sqlite  
-*.faiss  
-*.onnx  
-*.pkl  
-vectorstore/  
+# Python dependencies
+*.pyc
+__pycache__/
+*.egg-info/
+venv/
+env/
 
- 
-app/models_cache/*    
-!app/models_cache/.gitkeep  
-app/core/debug_tool.py
+# Backend build artifacts
+backend/models_cache/
 
-  
-.DS_Store  
-Thumbs.db  
+# Frontend build artifacts
+frontend/dist/
+frontend/build/
 
-# IDE  
-.idea/  
-.vscode/  
-*.swp  
-*.swo  
+# Log files
+*.log
+
+# Environment variables
+.env
+.env.local
+
+# IDE files
+.idea/
+.vscode/
+
+# VS Code settings
+.vscode/settings.json
+
+# Operating system files
+.DS_Store
+Thumbs.db
