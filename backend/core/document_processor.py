@@ -27,6 +27,7 @@ def load_documents(directory_path: str = DOCUMENTS_DIR) -> List[Document]:
             elif file_path.suffix.lower() == ".txt":
                 loader = TextLoader(str(file_path), encoding="utf-8")
                 documents.extend(loader.load())
+
         except Exception as e:
             print("Unexpected error:", e)
             pass
@@ -142,7 +143,7 @@ def process_documents(documents: List[Document], debug: bool = True) -> List[Doc
     if debug:
         print(f"generated {len(chunks)} chunks")
         if chunks:
-            for i in range(16):
+            for i in range(min(16, len(chunks))):
                 print(f"chunk #{i+1} (length {len(chunks[i].page_content)}):")
                 print(chunks[i].page_content)
         else:
@@ -207,16 +208,18 @@ def build_knowledge_base(documents_dir: str = DOCUMENTS_DIR) -> bool:
         documents = load_documents(documents_dir)
         if not documents:
             return False
-        chunks = process_documents(documents)
 
+        chunks = process_documents(documents)
         if not chunks:
             return False
+
         embedding_model = get_embeddings()
 
         if not embedding_model:
             return False
-
+        print("+++++++++++++++++++++++++++++++++++++++++++++++++")
         vector_db = create_vector_store(chunks, embedding_model)
+        print("+++++++++++++++++++++++++++++++++++++++++++++++++")
         vector_db_exists = vector_db is not None
         print(vector_db_exists)
         return vector_db_exists

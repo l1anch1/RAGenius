@@ -1,7 +1,7 @@
 // src/components/KnowledgeBase.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import QueryTab from './QueryTab';
-import KnowledgeBaseTab from './DocumentsManageTab';
+import KnowledgeBaseTab from './DocManageTab';
 import { FaSearch, FaExclamationTriangle, FaFile } from 'react-icons/fa';
 
 const KnowledgeBase = () => {

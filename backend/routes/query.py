@@ -1,3 +1,4 @@
+# Flask Blueprint (query_bp.py)
 import re
 import json
 from flask import Blueprint, request, Response, jsonify, stream_with_context
@@ -6,22 +7,43 @@ from core.model_utils import get_llm
 from langchain_core.prompts import PromptTemplate
 from core.retrieval_chain import FINANCE_QA_PROMPT_TEMPLATE, create_qa_chain
 from config import SEARCH_K
+from langchain.chains import LLMChain
 
 query_bp = Blueprint("query", __name__)
 
-global_qa_chain = None
+
+# Use a function to initialize the QA chain, not a global variable
+def create_global_qa_chain():
+    vector_db = get_vector_store()
+    llm = get_llm(streaming=True)  # Ensure streaming is enabled
+
+    prompt = PromptTemplate(
+        template=FINANCE_QA_PROMPT_TEMPLATE,
+        input_variables=["context", "question"],
+    )
+
+    # Create the chain using LLMChain directly
+    chain = LLMChain(llm=llm, prompt=prompt)
+
+    return chain
+
+
+global_qa_chain = create_global_qa_chain()  # initialize qa_chain
 
 
 @query_bp.route("/api/query/stream", methods=["POST", "GET"])
 def stream_query_knowledge_base():
     """Stream processing of knowledge base queries"""
     if not global_qa_chain:
-        return jsonify(
-            {
-                "status": "error",
-                "message": "The knowledge base is not initialized. Please build it first",
-            }
-        )
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "message": "The knowledge base is not initialized. Please build it first",
+                }
+            ),
+            500,
+        )  # Return 500 status code
 
     if request.method == "POST":
         data = request.get_json()
@@ -30,7 +52,10 @@ def stream_query_knowledge_base():
         query = request.args.get("q", "")
 
     if not query.strip():
-        return jsonify({"status": "error", "message": "Query content cannot be empty"})
+        return (
+            jsonify({"status": "error", "message": "Query content cannot be empty"}),
+            400,
+        )  # Return 400 status code
 
     def is_significant_overlap(text1, text2, overlap_threshold=0.4):
         norm_text1 = re.sub(r"\s+", "", text1).lower()
@@ -58,9 +83,6 @@ def stream_query_knowledge_base():
             # Build context
             context = "\n\n".join([doc.page_content for doc in docs])
 
-            # Get LLM with streaming callback
-            streaming_llm = get_llm(streaming=True)
-
             # Build prompt
             prompt = PromptTemplate(
                 template=FINANCE_QA_PROMPT_TEMPLATE,
@@ -87,12 +109,18 @@ def stream_query_knowledge_base():
                 if not has_significant_overlap:
                     sources.append({"content": content, "source": source_name})
 
-            full_prompt = prompt.format(context=context, question=query)
+            # Use the chain to run the prompt and context
+            try:
+                result = global_qa_chain.run(
+                    context=context, question=query
+                )  # Use the chain
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+                return  # Ensure the generator exits after sending an error
 
-            # Start streaming generation
-            for chunk in streaming_llm.stream(full_prompt):
-                token_content = chunk.content if hasattr(chunk, "content") else chunk
-                yield f"data: {json.dumps({'type': 'token', 'token': token_content})}\n\n"
+            # Stream the results token by token
+            for token in result:  # Directly iterate over the string result
+                yield f"data: {json.dumps({'type': 'token', 'token': token})}\n\n"
 
             # After text generation completes, send source documents information
             yield f"data: {json.dumps({'type': 'sources', 'sources': sources})}\n\n"

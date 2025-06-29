@@ -7,10 +7,10 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     open: true,
-    port: 3001,
+    port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000', // 确保这个 URL 是正确的
+        target: 'http://localhost:8000', // 确保这个 URL 是正确的
         changeOrigin: true,
         secure: false,
       },

@@ -1,33 +1,96 @@
-import React, { useState } from 'react';
+// React Component (QueryTab.jsx)
+import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 const QueryTab = ({ isInitialized }) => {
 	const [queryInput, setQueryInput] = useState('');
 	const [loading, setLoading] = useState(false);
-	const [results, setResults] = useState(null);
+	const [results, setResults] = useState('');
 	const [sources, setSources] = useState([]);
+	const [error, setError] = useState('');  // 用于显示错误信息
+	const resultsRef = useRef(null); // 用于跟踪结果，以便正确附加新token
+
+	useEffect(() => {
+		// 滚动到 answer-box 底部
+		if (results && resultsRef.current) {
+			resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+		}
+	}, [results]);
 
 	const sendStreamQuery = async () => {
 		if (!queryInput) return;
 
 		setLoading(true);
-		setResults(null);
+		setResults(''); // Reset results to an empty string
 		setSources([]);
+		setError('');
 
 		try {
-			const response = await fetch(`/api/query/stream?q=${encodeURIComponent(queryInput)}`);
+			const response = await fetch('/api/query/stream', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ query: queryInput }),
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
 			const reader = response.body.getReader();
 			const decoder = new TextDecoder('utf-8');
 
-			let markdownBuffer = '';
+			let partialData = ""; // 用于存储不完整的 JSON 数据
+
 			while (true) {
 				const { done, value } = await reader.read();
 				if (done) break;
-				markdownBuffer += decoder.decode(value, { stream: true });
+
+				partialData += decoder.decode(value);
+
+				// 处理可能包含多个 event 的数据
+				let parts = partialData.split('\n\n');
+				partialData = parts.pop(); // 最后一个可能是不完整的 event
+
+				for (const part of parts) {
+					if (!part) continue;
+
+					const dataPrefix = "data: ";
+					if (part.startsWith(dataPrefix)) {
+						const jsonData = part.substring(dataPrefix.length);
+						try {
+							const event = JSON.parse(jsonData);
+
+							switch (event.type) {
+								case 'token':
+									setResults(prevResults => prevResults + event.token);
+									break;
+								case 'sources':
+									setSources(event.sources);
+									break;
+								case 'error':
+									setError(event.error); // 显示错误信息
+									break;
+								case 'end':
+									// 流结束，无需操作
+									break;
+								default:
+									console.warn('Unknown event type:', event.type);
+							}
+						} catch (parseError) {
+							console.error('Failed to parse JSON:', jsonData, parseError);
+							setError(`Error parsing server response: ${parseError.message}`);
+						}
+					} else {
+						console.warn('Unexpected data format:', part);
+					}
+				}
 			}
-			setResults(markdownBuffer);
-			setSources([]); // Extract sources as necessary
-		} catch (error) {
-			console.error('Failed to process query:', error);
+
+		} catch (networkError) {
+			console.error('Network error:', networkError);
+			setError(`Network error: ${networkError.message}`); // 显示网络错误信息
 		} finally {
 			setLoading(false);
 		}
@@ -39,7 +102,7 @@ const QueryTab = ({ isInitialized }) => {
 				<input
 					type="text"
 					id="query-input"
-					placeholder="Please enter your question..."
+					placeholder="请输入你的问题..."
 					className="flex-1 p-2 border border-gray-300 rounded-l"
 					value={queryInput}
 					onChange={(e) => setQueryInput(e.target.value)}
@@ -50,41 +113,47 @@ const QueryTab = ({ isInitialized }) => {
 					onClick={sendStreamQuery}
 					disabled={loading || !queryInput}
 				>
-					Query
+					查询
 				</button>
 			</div>
 
 			{loading && (
 				<div className="loading flex flex-col items-center my-4">
 					<div className="spinner border-4 border-gray-300 rounded-full border-t-blue-600 animate-spin w-8 h-8"></div>
-					<p>Processing query...</p>
+					<p>处理查询中...</p>
+				</div>
+			)}
+
+			{error && (
+				<div className="error my-4 text-red-500">
+					<p>错误：{error}</p>
 				</div>
 			)}
 
 			{results && (
 				<div className="results my-4">
 					<div className="answer-box mb-4">
-						<h3>Answer:</h3>
-						<div id="answer-content" className="bg-blue-50 p-3 rounded">{results}</div>
+						<h3>答案：</h3>
+						<div id="answer-content" className="bg-blue-50 p-3 rounded" ref={resultsRef}>
+							<ReactMarkdown>{results}</ReactMarkdown>
+						</div>
 					</div>
 
 					<div className="sources-box">
-						<h3>Reference Sources:</h3>
+						<h3>参考来源：</h3>
 						{sources.length > 0 ? (
 							sources.map((source, index) => (
 								<div key={index} className="source-item p-3 border border-gray-300 rounded my-1">
-									<div className="source-title font-medium">{`Source ${index + 1}: ${source.source}`}</div>
+									<div className="source-title font-medium">{`来源 ${index + 1}: ${source.source}`}</div>
 									<div className="source-content">{source.content}</div>
 								</div>
 							))
 						) : (
-							<div className="text-gray-600 italic">No sources available.</div>
+							<div className="text-gray-600 italic">没有可用的来源。</div>
 						)}
 					</div>
 				</div>
 			)}
-
-
 		</div>
 	);
 };
