@@ -3,8 +3,8 @@
 A sophisticated QA system architected on Langchain's robust framework and powered by DeepSeek's large language models and OpenAI API. Leveraging Retrieval Augmented Generation (RAG) methodology, this platform seamlessly integrates proprietary domain knowledge with generative AI capabilities, delivering high accuracy and contextual relevance in specialized information retrieval scenarios.
 <br>
 
-![demo](assets/images/1.png)
-![demo](assets/images/2.png)
+![demo](frontend/public/images/1.png)
+![demo](frontend/public/images/2.png)
 
 # Features
 - Document-Grounded Responses: DeepSeek learns from your documents to provide better, more accurate answers
@@ -26,38 +26,47 @@ A sophisticated QA system architected on Langchain's robust framework and powere
 
 # Structure
 ```
-deepseek-rag
-│
-├── app/
-│ ├── core/
-│ │ ├── model_utils.py 
-│ │ ├── document_processor.py 
-│ │ ├── shared_instances.py
-│ │ └── retrieval_chain.py
-│ │
-│ └── config.py 
-│
-├── web/                    
-│ ├── static/  
-│ │ ├── style.css  
-│ │ └── script.js 
-│ │
-│ └── templates/
-│   └── index.html 
-│
-├── data/
-│ ├── documents 
-│ └── vectordb 
-│
-├── scripts/
-│ └── test_model.py
-│
-├── assets/
-│ └── images
-|
-├── web_app.py 
-│
-└── requirements.txt 
+RAGenius
+├─ backend
+│  ├─ app.py
+│  ├─ config.py
+│  ├─ core
+│  │  ├─ document_processor.py
+│  │  ├─ model_utils.py
+│  │  ├─ retrieval_chain.py
+│  │  └─ shared_instances.py
+│  ├─ data
+│  │  └─ documents
+│  ├─ models_cache
+│  ├─ prompts.py
+│  ├─ requirements.txt
+│  └─ routes
+│     ├─ documents.py
+│     ├─ info.py
+│     ├─ query.py
+│     └─ rebuild.py
+├─ data
+│  └─ documents
+├─ frontend
+│  ├─ public
+│  │  ├─ images
+│  │  │  ├─ 1.png
+│  │  │  └─ 2.png
+│  │  └─ vite.svg
+│  └─ src
+│     ├─ App.css
+│     ├─ App.jsx
+│     ├─ assets
+│     ├─ components
+│     │  ├─ DocumentsManageTab.jsx
+│     │  ├─ KnowledgeBase.jsx
+│     │  └─ QueryTab.jsx
+│     ├─ index.css
+│     └─ main.jsx
+├─ run.sh
+├─ scripts
+│  └─ test_model.py
+└─ README.md
 ```
 
 # Installation
@@ -144,61 +153,3 @@ For questions or support, please open an issue on the GitHub repository or conta
 
 
 
-
-```
-RAGenius
-├─ README.md
-├─ backend
-│  ├─ __init__.py
-│  ├─ app.py
-│  ├─ config.py
-│  ├─ core
-│  │  ├─ __init__.py
-│  │  ├─ document_processor.py
-│  │  ├─ model_utils.py
-│  │  ├─ retrieval_chain.py
-│  │  └─ shared_instances.py
-│  ├─ data
-│  │  └─ documents
-│  ├─ models_cache
-│  ├─ prompts.py
-│  ├─ requirements.txt
-│  └─ routes
-│     ├─ __init__.py
-│     ├─ documents.py
-│     ├─ info.py
-│     ├─ query.py
-│     └─ rebuild.py
-├─ data
-│  └─ documents
-│     └─ note.pdf
-├─ frontend
-│  ├─ eslint.config.js
-│  ├─ index.html
-│  ├─ package-lock.json
-│  ├─ package.json
-│  ├─ public
-│  │  ├─ images
-│  │  │  ├─ 1.png
-│  │  │  └─ 2.png
-│  │  └─ vite.svg
-│  ├─ src
-│  │  ├─ App.css
-│  │  ├─ App.jsx
-│  │  ├─ assets
-│  │  │  └─ react.svg
-│  │  ├─ components
-│  │  │  ├─ DocumentsManageTab.jsx
-│  │  │  ├─ KnowledgeBase.jsx
-│  │  │  └─ QueryTab.jsx
-│  │  ├─ index.css
-│  │  └─ main.jsx
-│  ├─ tailwind.config.js
-│  └─ vite.config.js
-├─ package-lock.json
-├─ package.json
-├─ run.sh
-└─ scripts
-   └─ test_model.py
-
-```

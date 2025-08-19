@@ -7,7 +7,7 @@ from core.model_utils import get_llm
 from langchain_core.prompts import PromptTemplate
 from core.retrieval_chain import FINANCE_QA_PROMPT_TEMPLATE, create_qa_chain
 from config import SEARCH_K
-from langchain.chains import LLMChain
+from langchain_core.runnables import RunnableSequence
 
 query_bp = Blueprint("query", __name__)
 
@@ -17,13 +17,17 @@ def create_global_qa_chain():
     vector_db = get_vector_store()
     llm = get_llm(streaming=True)  # Ensure streaming is enabled
 
+    if llm is None:
+        print("Warning: LLM is None, QA chain will not be available")
+        return None
+
     prompt = PromptTemplate(
         template=FINANCE_QA_PROMPT_TEMPLATE,
         input_variables=["context", "question"],
     )
 
-    # Create the chain using LLMChain directly
-    chain = LLMChain(llm=llm, prompt=prompt)
+    # Create the chain using modern RunnableSequence
+    chain = prompt | llm
 
     return chain
 
@@ -34,6 +38,8 @@ global_qa_chain = create_global_qa_chain()  # initialize qa_chain
 @query_bp.route("/api/query/stream", methods=["POST", "GET"])
 def stream_query_knowledge_base():
     """Stream processing of knowledge base queries"""
+    print(f"DEBUG: Query endpoint called, global_qa_chain is: {global_qa_chain}")
+    
     if not global_qa_chain:
         return (
             jsonify(
@@ -76,9 +82,12 @@ def stream_query_knowledge_base():
 
     def generate():
         try:
+            print(f"DEBUG: generate() called with query: {query}")
             # Get relevant documents
             vector_db = get_vector_store()
+            print(f"DEBUG: vector_db: {vector_db}")
             docs = vector_db.similarity_search(query, k=SEARCH_K)
+            print(f"DEBUG: found {len(docs)} documents")
 
             # Build context
             context = "\n\n".join([doc.page_content for doc in docs])
@@ -111,15 +120,28 @@ def stream_query_knowledge_base():
 
             # Use the chain to run the prompt and context
             try:
-                result = global_qa_chain.run(
-                    context=context, question=query
+                print(f"DEBUG: About to call global_qa_chain.invoke()")
+                result = global_qa_chain.invoke(
+                    {"context": context, "question": query}
                 )  # Use the chain
+                print(f"DEBUG: Chain invoke completed, result type: {type(result)}")
             except Exception as e:
-                yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+                error_msg = str(e)
+                print(f"DEBUG: Chain invoke failed: {error_msg}")
+                if "api key" in error_msg.lower() or "unauthorized" in error_msg.lower() or "404" in error_msg.lower():
+                    error_msg = "OpenAI API key is not valid. Please set a valid OPENAI_API_KEY environment variable."
+                yield f"data: {json.dumps({'type': 'error', 'error': error_msg})}\n\n"
                 return  # Ensure the generator exits after sending an error
 
             # Stream the results token by token
-            for token in result:  # Directly iterate over the string result
+            if hasattr(result, 'content'):
+                # For ChatOpenAI response
+                result_text = result.content
+            else:
+                # For string response
+                result_text = str(result)
+                
+            for token in result_text:  # Directly iterate over the string result
                 yield f"data: {json.dumps({'type': 'token', 'token': token})}\n\n"
 
             # After text generation completes, send source documents information
@@ -130,6 +152,10 @@ def stream_query_knowledge_base():
 
         except Exception as e:
             error_msg = str(e)
+            print(f"DEBUG: Exception in generate(): {error_msg}")
+            print(f"DEBUG: Exception type: {type(e)}")
+            import traceback
+            print(f"DEBUG: Traceback: {traceback.format_exc()}")
             yield f"data: {json.dumps({'type': 'error', 'error': error_msg})}\n\n"
 
     return Response(

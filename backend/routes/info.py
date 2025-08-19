@@ -7,7 +7,7 @@ from config import (
     LLM_OPENAI_API_KEY,
     LLM_OPENAI_MODEL,
 )
-from core.shared_instances import qa_chain
+from core.document_processor import get_vector_store
 
 info_bp = Blueprint("info", __name__)
 
@@ -26,7 +26,7 @@ def get_system_info():
                 "model": model,
                 "embedding_model": EMBEDDING_MODEL,
                 "threads": LLM_NUM_THREAD,
-                "initialized": qa_chain is not None,
+                "initialized": get_vector_store() is not None,
             }
         )
     except Exception as e:

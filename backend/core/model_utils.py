@@ -62,7 +62,7 @@ def get_llm(
                 **kwargs,
             }
             if LLM_OPENAI_API_BASE:
-                model_kwargs["openai_api_base"] = LLM_OPENAI_API_BASE
+                model_kwargs["base_url"] = LLM_OPENAI_API_BASE
 
             shared.llm_model = ChatOpenAI(**model_kwargs)
             print(f"loaded openai model: {model}, device: {DEVICE}")
