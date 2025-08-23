@@ -1,25 +1,38 @@
-import os
+"""
+Documents Routes
+文档相关路由
+"""
 from flask import Blueprint, jsonify
-from config import DOCUMENTS_DIR
+import logging
 
-documents_bp = Blueprint("documents", __name__)
+from services.document_service import DocumentService
+
+logger = logging.getLogger(__name__)
 
 
-@documents_bp.route("/api/documents", methods=["GET"])
-def get_documents():
-    try:
-        if not os.path.exists(DOCUMENTS_DIR):
-            return jsonify({"status": "success", "documents": []})
-
-        documents = [
-            file_name
-            for file_name in os.listdir(DOCUMENTS_DIR)
-            if os.path.isfile(os.path.join(DOCUMENTS_DIR, file_name))
-            and file_name != ".gitkeep"
-        ]
-
-        return jsonify({"status": "success", "documents": documents})
-    except Exception as e:
-        return jsonify(
-            {"status": "error", "message": f"cannot get documents: {str(e)}"}
-        )
+def create_documents_blueprint(document_service: DocumentService) -> Blueprint:
+    """创建文档路由蓝图"""
+    
+    documents_bp = Blueprint('documents', __name__)
+    
+    @documents_bp.route("/api/documents", methods=["GET"])
+    def get_documents():
+        """获取文档列表"""
+        try:
+            result = document_service.get_documents()
+            return jsonify(result)
+        except Exception as e:
+            logger.error(f"Error in get_documents: {e}")
+            return jsonify({"status": "error", "message": str(e)}), 500
+    
+    @documents_bp.route("/api/documents/vectorized", methods=["GET"])
+    def get_vectorized_documents():
+        """获取已向量化的文档列表"""
+        try:
+            result = document_service.get_vectorized_documents()
+            return jsonify(result)
+        except Exception as e:
+            logger.error(f"Error in get_vectorized_documents: {e}")
+            return jsonify({"status": "error", "message": str(e)}), 500
+    
+    return documents_bp

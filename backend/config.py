@@ -38,3 +38,8 @@ CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "150"))
 SEARCH_K = int(
     os.getenv("SEARCH_K", "8")
 )  # Number of documents to return during retrieval
+
+# Hybrid retrieval settings
+SIMILARITY_WEIGHT = float(os.getenv("SIMILARITY_WEIGHT", "0.6"))  # 语义相似度权重
+MMR_WEIGHT = float(os.getenv("MMR_WEIGHT", "0.4"))  # MMR多样性权重
+MMR_LAMBDA = float(os.getenv("MMR_LAMBDA", "0.7"))  # MMR lambda参数，平衡相关性和多样性

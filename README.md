@@ -30,11 +30,22 @@ RAGenius
 ├─ backend
 │  ├─ app.py
 │  ├─ config.py
+│  ├─ container.py
 │  ├─ core
 │  │  ├─ document_processor.py
 │  │  ├─ model_utils.py
-│  │  ├─ retrieval_chain.py
-│  │  └─ shared_instances.py
+│  │  └─ retrieval_chain.py
+│  ├─ interfaces
+│  │  ├─ services.py
+│  │  └─ vector_store.py
+│  ├─ managers
+│  │  ├─ cache_manager.py
+│  │  ├─ model_manager.py
+│  │  └─ vector_store_manager.py
+│  ├─ services
+│  │  ├─ document_service.py
+│  │  ├─ query_service.py
+│  │  └─ system_service.py
 │  ├─ data
 │  │  └─ documents
 │  ├─ models_cache
@@ -42,9 +53,8 @@ RAGenius
 │  ├─ requirements.txt
 │  └─ routes
 │     ├─ documents.py
-│     ├─ info.py
 │     ├─ query.py
-│     └─ rebuild.py
+│     └─ system.py
 ├─ data
 │  └─ documents
 ├─ frontend

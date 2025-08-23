@@ -5,7 +5,7 @@ import KnowledgeBase from './components/KnowledgeBase';
 
 const App = () => {
   return (
-    <div className="w-screen p-15 bg-gray-100">
+    <div className="min-h-screen bg-gray-100">
       <KnowledgeBase />
     </div>
   );

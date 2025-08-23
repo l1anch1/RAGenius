@@ -45,6 +45,9 @@ const DocumentsManageTab = ({ refreshSystemInfo }) => {
 				setSuccessMessage(data.message);
 				fetchDocuments(); // Refresh documents after rebuilding
 				refreshSystemInfo(); // Refresh system info after rebuilding
+				
+				// 触发自定义事件通知其他组件
+				window.dispatchEvent(new CustomEvent('knowledgeBaseRebuilt'));
 			} else {
 				setErrorMessage(data.message);
 			}

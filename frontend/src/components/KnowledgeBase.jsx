@@ -1,11 +1,9 @@
 // src/components/KnowledgeBase.jsx
 import React, { useEffect, useRef, useState } from 'react';
-import QueryTab from './QueryTab';
-import KnowledgeBaseTab from './DocManageTab';
-import { FaSearch, FaExclamationTriangle, FaFile } from 'react-icons/fa';
+import IntegratedTab from './IntegratedTab';
+import { FaExclamationTriangle, FaCogs } from 'react-icons/fa';
 
 const KnowledgeBase = () => {
-	const [currentTab, setCurrentTab] = useState('query');
 	const [modelInfo, setModelInfo] = useState('Model: Loading...');
 	const [isInitialized, setIsInitialized] = useState(false);
 	const warningMessageRef = useRef(null);
@@ -31,51 +29,20 @@ const KnowledgeBase = () => {
 		}
 	};
 
-	const handleTabChange = (tab) => {
-		setCurrentTab(tab);
-	};
-
 	return (
-		<div className="rounded-lg bg-white min-h-screen w-screen p-5 max-w-full overflow-x-auto box-border">
-			<header className="bg-blue-100 text-blue-600 p-6 rounded-lg shadow-lg mb-6">
-				<h1 className="text-4xl font-semibold">Knowledge Base System</h1>
-				<div className="opacity-90 text-m mt-2" id="model-info">
-					{modelInfo}
-				</div>
-			</header>
-
-			<div className="flex border-b border-gray-300 rounded-lg overflow-hidden gap-6">
-				<button onClick={() => handleTabChange('query')} className={`tab-btn flex-1 p-3 text-lg font-medium transition-all duration-300 ${currentTab === 'query' ? 'bg-white text-blue-600 border-b-2 border-blue-600 shadow' : 'text-gray-600 hover:bg-blue-100'}`}>
-					<div className="flex items-center justify-center">
-						<FaSearch className={`mr-2 h-6 w-6 ${currentTab === 'query' ? 'text-blue-600' : 'text-gray-600'}`} />
-						Query Knowledge Base
+		<div className="h-screen w-full overflow-hidden">
+			{/* 警告消息 - 固定在顶部 */}
+			{!isInitialized && (
+				<div className="bg-yellow-50 border-b border-yellow-200 px-6 py-3 flex items-center justify-center">
+					<div className="flex items-center space-x-2 text-yellow-800">
+						<FaExclamationTriangle className="h-4 w-4" />
+						<span className="text-sm font-medium">知识库尚未初始化，请先重建知识库</span>
 					</div>
-				</button>
-				<button onClick={() => handleTabChange('knowledgeBase')} className={`tab-btn flex-1 p-3 text-lg font-medium transition-all duration-300 ${currentTab === 'knowledgeBase' ? 'bg-white text-blue-600 border-b-2 border-blue-600 shadow' : 'text-gray-600 hover:bg-blue-100'}`}>
-					<div className="flex items-center justify-center">
-						<FaFile className={`mr-2 h-6 w-6 ${currentTab === 'knowledgeBase' ? 'text-blue-600' : 'text-gray-600'}`} />
-						Documents Management
-					</div>
-				</button>
-			</div>
-
-			<div className="tab-content mt-4 bg-white p-6 shadow-lg">
-				<div
-					id="warning-message"
-					ref={warningMessageRef}
-					className={`not-initialized-warning ${isInitialized ? 'hidden' : 'block'} bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 rounded`}
-				>
-					<FaExclamationTriangle className="h-6 w-6 inline-block mr-2" />
-					Warning: The knowledge base is not initialized. Please rebuild it first.
 				</div>
-
-				<div className={`tab-pane ${currentTab === 'query' ? 'active' : 'hidden'}`}>
-					<QueryTab isInitialized={isInitialized} />
-				</div>
-				<div className={`tab-pane ${currentTab === 'knowledgeBase' ? 'active' : 'hidden'}`}>
-					<KnowledgeBaseTab refreshSystemInfo={fetchSystemInfo} />
-				</div>
-			</div>
+			)}
+			
+			{/* 主界面 */}
+			<IntegratedTab isInitialized={isInitialized} refreshSystemInfo={fetchSystemInfo} />
 		</div>
 	);
 };

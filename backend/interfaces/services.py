@@ -1,0 +1,53 @@
+"""
+Service Interfaces
+定义服务层的抽象接口
+"""
+from abc import ABC, abstractmethod
+from typing import Dict, Any, Optional, List
+
+
+class DocumentServiceInterface(ABC):
+    """文档服务接口"""
+    
+    @abstractmethod
+    def get_documents(self) -> Dict[str, Any]:
+        """获取文档列表"""
+        pass
+    
+    @abstractmethod
+    def get_vectorized_documents(self) -> Dict[str, Any]:
+        """获取已向量化的文档列表"""
+        pass
+    
+    @abstractmethod
+    def rebuild_knowledge_base(self) -> Dict[str, Any]:
+        """重建知识库"""
+        pass
+
+
+class QueryServiceInterface(ABC):
+    """查询服务接口"""
+    
+    @abstractmethod
+    def process_query(self, query: str) -> Dict[str, Any]:
+        """处理查询请求"""
+        pass
+    
+    @abstractmethod
+    def process_stream_query(self, query: str):
+        """处理流式查询请求"""
+        pass
+
+
+class SystemServiceInterface(ABC):
+    """系统服务接口"""
+    
+    @abstractmethod
+    def get_system_info(self) -> Dict[str, Any]:
+        """获取系统信息"""
+        pass
+    
+    @abstractmethod
+    def is_initialized(self) -> bool:
+        """检查系统是否已初始化"""
+        pass

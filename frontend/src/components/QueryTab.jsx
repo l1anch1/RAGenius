@@ -8,6 +8,7 @@ const QueryTab = ({ isInitialized }) => {
 	const [results, setResults] = useState('');
 	const [sources, setSources] = useState([]);
 	const [error, setError] = useState('');  // 用于显示错误信息
+	const [documents, setDocuments] = useState([]);  // 用于存储文档列表
 	const resultsRef = useRef(null); // 用于跟踪结果，以便正确附加新token
 
 	useEffect(() => {
@@ -16,6 +17,45 @@ const QueryTab = ({ isInitialized }) => {
 			resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
 		}
 	}, [results]);
+
+	// 获取已向量化的文档列表
+	const fetchDocuments = async () => {
+		try {
+			const response = await fetch('/api/documents/vectorized');
+			if (response.ok) {
+				const data = await response.json();
+				setDocuments(data.documents || []);
+			}
+		} catch (error) {
+			console.error('Failed to fetch vectorized documents:', error);
+		}
+	};
+
+	// 组件挂载时获取文档列表
+	useEffect(() => {
+		if (isInitialized) {
+			fetchDocuments();
+		}
+	}, [isInitialized]);
+
+	// 监听重建事件，自动刷新文档列表
+	useEffect(() => {
+		if (!isInitialized) {
+			return;
+		}
+
+		const handleRebuildComplete = () => {
+			fetchDocuments();
+		};
+
+		// 监听自定义事件
+		window.addEventListener('knowledgeBaseRebuilt', handleRebuildComplete);
+
+		// 清理函数
+		return () => {
+			window.removeEventListener('knowledgeBaseRebuilt', handleRebuildComplete);
+		};
+	}, [isInitialized]);
 
 	const sendStreamQuery = async () => {
 		if (!queryInput) return;
@@ -116,6 +156,36 @@ const QueryTab = ({ isInitialized }) => {
 					查询
 				</button>
 			</div>
+
+			{/* 知识库文档提示 */}
+			{isInitialized && (
+				<div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+					<div className="flex justify-between items-center mb-2">
+						<h4 className="text-sm font-medium text-blue-800">📚 当前知识库已向量化的文档：</h4>
+						<button
+							onClick={fetchDocuments}
+							className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+							title="手动刷新文档列表"
+						>
+							🔄 刷新
+						</button>
+					</div>
+					{documents.length > 0 ? (
+						<div className="flex flex-wrap gap-2">
+							{documents.map((filename, index) => (
+								<span 
+									key={index}
+									className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
+								>
+									{filename}
+								</span>
+							))}
+						</div>
+					) : (
+						<p className="text-gray-500 text-sm italic">暂无向量化文档</p>
+					)}
+				</div>
+			)}
 
 			{loading && (
 				<div className="loading flex flex-col items-center my-4">
