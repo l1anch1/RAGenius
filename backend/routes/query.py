@@ -27,7 +27,12 @@ def create_query_blueprint(query_service: QueryService) -> Blueprint:
             if not user_query.strip():
                 return jsonify({"status": "error", "message": "Query cannot be empty"}), 400
             
-            result = query_service.process_query(user_query)
+            # 获取对话历史（可选）
+            chat_history = data.get('chat_history', [])
+            if chat_history and not isinstance(chat_history, list):
+                chat_history = []
+            
+            result = query_service.process_query(user_query, chat_history)
             
             if result['status'] == 'error':
                 return jsonify(result), 500
@@ -50,9 +55,14 @@ def create_query_blueprint(query_service: QueryService) -> Blueprint:
             if not user_query.strip():
                 return jsonify({"status": "error", "message": "Query cannot be empty"}), 400
             
+            # 获取对话历史（可选）
+            chat_history = data.get('chat_history', [])
+            if chat_history and not isinstance(chat_history, list):
+                chat_history = []
+            
             def generate():
                 try:
-                    for event in query_service.process_stream_query(user_query):
+                    for event in query_service.process_stream_query(user_query, chat_history):
                         yield event
                 except Exception as e:
                     logger.error(f"Error in stream query: {e}")

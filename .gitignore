@@ -12,7 +12,7 @@ venv/
 env/
 
 # Backend build artifacts
-backend/models_cache/
+models_cache/
 
 # Frontend build artifacts
 frontend/dist/

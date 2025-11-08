@@ -31,10 +31,6 @@ RAGenius
 │  ├─ app.py
 │  ├─ config.py
 │  ├─ container.py
-│  ├─ core
-│  │  ├─ document_processor.py
-│  │  ├─ model_utils.py
-│  │  └─ retrieval_chain.py
 │  ├─ interfaces
 │  │  ├─ services.py
 │  │  └─ vector_store.py
@@ -46,8 +42,6 @@ RAGenius
 │  │  ├─ document_service.py
 │  │  ├─ query_service.py
 │  │  └─ system_service.py
-│  ├─ data
-│  │  └─ documents
 │  ├─ models_cache
 │  ├─ prompts.py
 │  ├─ requirements.txt
@@ -55,8 +49,7 @@ RAGenius
 │     ├─ documents.py
 │     ├─ query.py
 │     └─ system.py
-├─ data
-│  └─ documents
+├─ models_cache
 ├─ frontend
 │  ├─ public
 │  │  ├─ images
@@ -68,9 +61,8 @@ RAGenius
 │     ├─ App.jsx
 │     ├─ assets
 │     ├─ components
-│     │  ├─ DocumentsManageTab.jsx
-│     │  ├─ KnowledgeBase.jsx
-│     │  └─ QueryTab.jsx
+│     │  ├─ IntegratedTab.jsx
+│     │  └─ KnowledgeBase.jsx
 │     ├─ index.css
 │     └─ main.jsx
 ├─ run.sh
@@ -83,7 +75,7 @@ RAGenius
 1. Clone the repository:
 ```
 git clone https://github.com/l1anch1/DeepSeek-RAG.git
-cd DeepSeek-RAG
+cd RAGenius
 ```
  
 2. Create and activate a virtual environment (recommended):
@@ -94,7 +86,7 @@ conda activate deepseek-rag
 
 3. Install dependencies:
 ```
-pip install -r requirements.txt 
+pip install -r backend/requirements.txt 
 ``` 
 
 4. For local models, install Ollama following instructions at <https://ollama.com/>
@@ -103,7 +95,7 @@ pip install -r requirements.txt
 ```
 ollama pull deepseek-r1:14b
 ``` 
-6. For OpenAI API, set your API key and base url(optional) in `config.py`
+6. For OpenAI API, set your API key and base url(optional) as environment variables in a `.env` file or in your system environment
 
 
 # Usage
@@ -116,28 +108,40 @@ python ./scripts/test_model.py
 python ./scripts/test_model.py --use-openai
 ``` 
 
-2. Place your documents in the data/documents directory
+2. Upload your documents through the web interface 
 
 | Format | Support |
 |--------|---------|
 | PDF    | ✓       |
 | TXT    | ✓       |
+| MD     | ✓       |
 | CSV    | ✓       |
+| DOCX   | ✓       |
+| DOC    | ✓       |
 
 3. Start the web application:
 ```
-# Using local DeepSeek model (default)
-python web_app.py
-
-# Using OpenAI API
-python web_app.py --use-openai
+./run.sh
 ```
 
-4. Open your browser and visit http://localhost:5000
+Alternatively, you can start the backend and frontend separately:
+```
+# Start backend
+cd backend
+python app.py
 
-5. Click `Rebuild Knowledge Base` to process your documents
+# Start frontend (in another terminal)
+cd frontend
+npm run dev
+```
 
-6. Ask questions in the query box and receive document-grounded answers
+4. Open your browser and visit http://localhost:3000
+
+5. Upload documents using the "Upload File" button in the document management sidebar
+
+6. Click `Rebuild Knowledge Base` to process your documents
+
+7. Ask questions in the query box and receive document-grounded answers
 
 ## Command Line Arguments
 | Argument | Description | Default |  

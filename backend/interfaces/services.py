@@ -20,6 +20,15 @@ class DocumentServiceInterface(ABC):
         pass
     
     @abstractmethod
+    def upload_document(self, file: Any) -> Dict[str, Any]:
+        """上传文档
+        
+        Args:
+            file: 上传的文件对象
+        """
+        pass
+    
+    @abstractmethod
     def rebuild_knowledge_base(self) -> Dict[str, Any]:
         """重建知识库"""
         pass

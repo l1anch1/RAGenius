@@ -10,9 +10,8 @@ DEVICE = os.getenv("DEVICE", "cpu")
 
 # Data directories - all paths relative to project root
 BASE_DIR = str(Path(__file__).resolve().parent.parent)  # Project root directory
-DATA_DIR = os.getenv("DATA_DIR", os.path.join(BASE_DIR, "data"))
-DOCUMENTS_DIR = os.getenv("DOCUMENTS_DIR", os.path.join(DATA_DIR, "documents"))
-VECTOR_DB_DIR = os.getenv("VECTOR_DB_DIR", os.path.join(DATA_DIR, "vectordb"))
+# Note: Documents are now stored in memory, not on disk
+VECTOR_DB_DIR = os.getenv("VECTOR_DB_DIR", os.path.join(BASE_DIR, "data", "vectordb"))
 
 # LLM model settings
 LLM_USE_OPENAI = True

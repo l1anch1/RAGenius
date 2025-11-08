@@ -2,7 +2,7 @@
 Documents Routes
 文档相关路由
 """
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 import logging
 
 from services.document_service import DocumentService
@@ -33,6 +33,32 @@ def create_documents_blueprint(document_service: DocumentService) -> Blueprint:
             return jsonify(result)
         except Exception as e:
             logger.error(f"Error in get_vectorized_documents: {e}")
+            return jsonify({"status": "error", "message": str(e)}), 500
+    
+    @documents_bp.route("/api/documents/upload", methods=["POST"])
+    def upload_document():
+        """上传文档"""
+        try:
+            # 检查是否有文件
+            if 'file' not in request.files:
+                return jsonify({"status": "error", "message": "No file provided"}), 400
+            
+            file = request.files['file']
+            
+            # 检查文件名
+            if file.filename == '':
+                return jsonify({"status": "error", "message": "No file selected"}), 400
+            
+            # 上传文件
+            result = document_service.upload_document(file)
+            
+            if result['status'] == 'error':
+                return jsonify(result), 400
+            
+            return jsonify(result)
+            
+        except Exception as e:
+            logger.error(f"Error in upload_document: {e}")
             return jsonify({"status": "error", "message": str(e)}), 500
     
     return documents_bp

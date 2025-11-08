@@ -3,36 +3,97 @@ Vector Store Manager
 向量存储管理器实现
 """
 import os
+import io
 import shutil
 import stat
 import time
 import threading
 from typing import Optional, Dict, Any, List
 import logging
+import tempfile
 
 from langchain_community.vectorstores import Chroma
 from langchain_community.document_loaders import PyPDFLoader, CSVLoader, TextLoader
+from langchain_core.documents import Document as LangChainDocument
 
 from interfaces.vector_store import VectorStoreInterface, EmbeddingInterface
 from managers.cache_manager import CacheManager
-from config import VECTOR_DB_DIR, DOCUMENTS_DIR, CHUNK_SIZE, CHUNK_OVERLAP
+from config import VECTOR_DB_DIR, CHUNK_SIZE, CHUNK_OVERLAP
 
 logger = logging.getLogger(__name__)
+
+
+class WordDocumentLoader:
+    """Word文档加载器（使用python-docx）"""
+    
+    def __init__(self, file_path: str):
+        """
+        初始化Word文档加载器
+        
+        Args:
+            file_path: Word文档路径
+        """
+        self.file_path = file_path
+    
+    def load(self) -> List[LangChainDocument]:
+        """加载Word文档"""
+        try:
+            from docx import Document as DocxDocument
+            
+            doc = DocxDocument(self.file_path)
+            text_parts = []
+            
+            # 提取所有段落
+            for para in doc.paragraphs:
+                if para.text.strip():
+                    text_parts.append(para.text)
+            
+            # 提取表格内容
+            for table in doc.tables:
+                for row in table.rows:
+                    row_text = []
+                    for cell in row.cells:
+                        if cell.text.strip():
+                            row_text.append(cell.text.strip())
+                    if row_text:
+                        text_parts.append(" | ".join(row_text))
+            
+            # 合并所有文本
+            full_text = "\n\n".join(text_parts)
+            
+            if not full_text.strip():
+                logger.warning(f"Word document {self.file_path} appears to be empty")
+                return []
+            
+            # 创建LangChain Document对象
+            return [LangChainDocument(
+                page_content=full_text,
+                metadata={"source": self.file_path}
+            )]
+            
+        except ImportError as import_err:
+            error_msg = "python-docx library not installed. Please install it with: pip install python-docx"
+            logger.error(error_msg)
+            logger.error(f"Import error details: {import_err}")
+            raise ImportError(error_msg) from import_err
+        except Exception as e:
+            logger.error(f"Error loading Word document {self.file_path}: {e}")
+            import traceback
+            logger.error(f"Word document loading traceback: {traceback.format_exc()}")
+            raise
 
 
 class ChromaVectorStoreManager(VectorStoreInterface):
     """ChromaDB向量存储管理器"""
     
-    def __init__(self, embedding_interface: EmbeddingInterface, documents_dir: str = DOCUMENTS_DIR):
+    def __init__(self, embedding_interface: EmbeddingInterface):
         """
         初始化向量存储管理器
         
         Args:
             embedding_interface: 嵌入模型接口
-            documents_dir: 文档目录路径
         """
         self.embedding_interface = embedding_interface
-        self.documents_dir = documents_dir
         
         # 使用内存存储，不持久化
         self._vector_store = None
@@ -41,26 +102,24 @@ class ChromaVectorStoreManager(VectorStoreInterface):
         self._last_build_time = None
         
         self._lock = threading.RLock()
-        logger.info(f"ChromaVectorStoreManager initialized with documents_dir: {documents_dir} (memory-only mode)")
+        logger.info("ChromaVectorStoreManager initialized (memory-only mode)")
     
     def get_store(self) -> Optional[Chroma]:
         """获取向量存储实例"""
         with self._lock:
             return self._vector_store
     
-    def rebuild_store(self, documents_dir: str = None) -> bool:
+    def rebuild_store(self, documents_dir: str) -> bool:
         """
-        重建向量存储 - 内存模式，每次重新创建
+        重建向量存储 - 从文件系统（已废弃，保留用于接口兼容性）
         
         Args:
-            documents_dir: 文档目录路径，如果为None则使用默认路径
+            documents_dir: 文档目录路径
         
         Returns:
             重建是否成功
         """
-        if documents_dir is None:
-            documents_dir = self.documents_dir
-            
+        logger.warning("rebuild_store is deprecated. Use rebuild_store_from_memory instead.")
         with self._lock:
             try:
                 logger.info("Starting vector store rebuild (memory mode)...")
@@ -129,6 +188,127 @@ class ChromaVectorStoreManager(VectorStoreInterface):
                 traceback.print_exc()
                 return False
     
+    def rebuild_store_from_memory(self, in_memory_documents: Dict[str, bytes]) -> bool:
+        """
+        从内存文档重建向量存储
+        
+        Args:
+            in_memory_documents: 内存中的文档字典 {filename: file_content_bytes}
+        
+        Returns:
+            重建是否成功
+        """
+        with self._lock:
+            try:
+                logger.info("Starting vector store rebuild from memory...")
+                
+                # 1. 清除旧的内存存储
+                self._vector_store = None
+                self._vectorized_documents = []
+                self._total_chunks = 0
+                
+                if not in_memory_documents:
+                    logger.warning("No documents in memory to process")
+                    return False
+                
+                # 2. 从内存文档加载
+                logger.info(f"Loading {len(in_memory_documents)} documents from memory")
+                documents = self._load_documents_from_memory(in_memory_documents)
+                if not documents:
+                    logger.warning("No documents loaded from memory")
+                    return False
+                
+                logger.info(f"Successfully loaded {len(documents)} documents from memory")
+                
+                # 3. 处理文档为chunks
+                logger.info("Processing documents into chunks...")
+                chunks = self._process_documents(documents)
+                if not chunks:
+                    logger.warning("No chunks generated from documents")
+                    return False
+                
+                logger.info(f"Generated {len(chunks)} chunks from {len(documents)} documents")
+                
+                # 4. 获取嵌入模型
+                logger.info("Creating new in-memory vector store...")
+                embedding_model = self.embedding_interface.get_embeddings()
+                if not embedding_model:
+                    logger.error("Embedding model not available")
+                    return False
+                
+                # 5. 创建内存向量存储（不持久化）
+                self._vector_store = Chroma.from_documents(
+                    documents=chunks,
+                    embedding=embedding_model,
+                    collection_name="documents"
+                    # 不设置persist_directory，使用内存存储
+                )
+                
+                # 6. 记录向量化的文档信息
+                document_set = set()
+                for chunk in chunks:
+                    if hasattr(chunk, 'metadata') and 'source' in chunk.metadata:
+                        source = chunk.metadata['source']
+                        filename = os.path.basename(source)
+                        if filename:
+                            document_set.add(filename)
+                
+                self._vectorized_documents = sorted(list(document_set))
+                self._total_chunks = len(chunks)
+                self._last_build_time = time.time()
+                
+                logger.info(f"Successfully created in-memory vector store with:")
+                logger.info(f"  - {self._total_chunks} chunks")
+                logger.info(f"  - {len(self._vectorized_documents)} documents: {self._vectorized_documents}")
+                
+                return True
+                
+            except Exception as e:
+                logger.error(f"Failed to rebuild vector store from memory: {e}")
+                import traceback
+                traceback.print_exc()
+                return False
+    
+    def _load_documents_from_memory(self, in_memory_documents: Dict[str, bytes]) -> List[Any]:
+        """从内存文档加载文档"""
+        documents = []
+        
+        # 创建临时目录用于处理文件
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for filename, file_content in in_memory_documents.items():
+                try:
+                    logger.info(f"Processing file from memory: {filename}")
+                    
+                    # 创建临时文件
+                    temp_file_path = os.path.join(temp_dir, filename)
+                    with open(temp_file_path, 'wb') as f:
+                        f.write(file_content)
+                    
+                    # 使用LangChain加载器加载文档
+                    if filename.lower().endswith('.pdf'):
+                        loader = PyPDFLoader(temp_file_path)
+                    elif filename.lower().endswith('.csv'):
+                        loader = CSVLoader(temp_file_path)
+                    elif filename.lower().endswith(('.txt', '.md')):
+                        loader = TextLoader(temp_file_path)
+                    elif filename.lower().endswith(('.docx', '.doc')):
+                        loader = WordDocumentLoader(temp_file_path)
+                    else:
+                        logger.warning(f"Unsupported file type: {filename}")
+                        continue
+                    
+                    docs = loader.load()
+                    documents.extend(docs)
+                    logger.info(f"Successfully loaded {len(docs)} pages from {filename}")
+                    
+                except Exception as e:
+                    logger.error(f"Error loading {filename} from memory: {e}")
+                    import traceback
+                    logger.error(f"Traceback: {traceback.format_exc()}")
+                    continue
+        
+        return documents
+    
     def get_vectorized_documents(self) -> Dict[str, Any]:
         """获取已向量化的文档列表 - 内存模式"""
         with self._lock:
@@ -181,6 +361,8 @@ class ChromaVectorStoreManager(VectorStoreInterface):
                     loader = CSVLoader(file_path)
                 elif filename.lower().endswith(('.txt', '.md')):
                     loader = TextLoader(file_path)
+                elif filename.lower().endswith(('.docx', '.doc')):
+                    loader = WordDocumentLoader(file_path)
                 else:
                     logger.warning(f"Unsupported file type: {filename}")
                     continue

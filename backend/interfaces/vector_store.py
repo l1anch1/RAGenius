@@ -16,7 +16,16 @@ class VectorStoreInterface(ABC):
     
     @abstractmethod
     def rebuild_store(self, documents_dir: str) -> bool:
-        """重建向量存储"""
+        """重建向量存储（从文件系统）"""
+        pass
+    
+    @abstractmethod
+    def rebuild_store_from_memory(self, in_memory_documents: Dict[str, bytes]) -> bool:
+        """从内存文档重建向量存储
+        
+        Args:
+            in_memory_documents: 内存中的文档字典 {filename: file_content_bytes}
+        """
         pass
     
     @abstractmethod

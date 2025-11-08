@@ -48,19 +48,37 @@ class EmbeddingManager(EmbeddingInterface):
             encode_kwargs = {"normalize_embeddings": True}
             
             logger.info(f"Loading embedding model: {model_name}")
+            logger.info("This may take a few minutes on first run (downloading model)...")
+            logger.info("Please wait, the model is being loaded into memory...")
             
-            embedding_model = HuggingFaceBgeEmbeddings(
-                model_name=model_name,
-                model_kwargs=model_kwargs,
-                encode_kwargs=encode_kwargs,
-                cache_folder="./models_cache"
-            )
+            # 添加超时和错误处理
+            import time
+            start_time = time.time()
             
-            logger.info(f"Embedding model loaded successfully: {model_name}")
-            return embedding_model
+            try:
+                embedding_model = HuggingFaceBgeEmbeddings(
+                    model_name=model_name,
+                    model_kwargs=model_kwargs,
+                    encode_kwargs=encode_kwargs,
+                    cache_folder="./models_cache"
+                )
+                
+                elapsed_time = time.time() - start_time
+                logger.info(f"Embedding model loaded successfully: {model_name} (took {elapsed_time:.2f} seconds)")
+                return embedding_model
+                
+            except Exception as load_error:
+                logger.error(f"Error during model loading: {load_error}")
+                logger.error("This might be due to:")
+                logger.error("1. Network issues (model download)")
+                logger.error("2. Insufficient memory")
+                logger.error("3. Model cache corruption")
+                raise
             
         except Exception as e:
             logger.error(f"Failed to load embedding model: {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
 

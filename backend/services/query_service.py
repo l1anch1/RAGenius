@@ -36,44 +36,15 @@ class QueryService(QueryServiceInterface):
         
         logger.info("QueryService initialized")
     
-    def process_query(self, query: str) -> Dict[str, Any]:
-        """处理查询请求"""
+    def process_query(self, query: str, chat_history: list = None) -> Dict[str, Any]:
+        """处理查询请求
+        
+        Args:
+            query: 用户查询
+            chat_history: 对话历史，格式为 [{"question": "问题", "answer": "回答"}, ...]
+        """
         try:
-            # 先获取向量存储和检索相关文档
-            vector_store = self.vector_store_manager.get_store()
-            if not vector_store:
-                return {
-                    "status": "error",
-                    "message": "Vector store not available. Please check if the knowledge base is built."
-                }
-            
-            # 检查知识库状态
-            try:
-                collection = vector_store._collection
-                total_count = collection.count()
-                logger.info(f"Knowledge base contains {total_count} total chunks")
-            except Exception as e:
-                logger.warning(f"Could not get collection count: {e}")
-            
-            # 创建混合检索器
-            retriever = self._create_hybrid_retriever(vector_store)
-            all_retrieved_docs = retriever.get_relevant_documents(query)
-            
-            # 放宽文档数量限制，允许更多候选文档用于参考来源显示
-            max_candidates = SEARCH_K * 2  # 允许更多候选文档
-            retrieved_docs_for_sources = all_retrieved_docs[:max_candidates] if len(all_retrieved_docs) > max_candidates else all_retrieved_docs
-            retrieved_docs_for_llm = all_retrieved_docs[:SEARCH_K] if len(all_retrieved_docs) > SEARCH_K else all_retrieved_docs
-            
-            # 添加调试信息
-            logger.info(f"Retrieved {len(all_retrieved_docs)} documents from hybrid retriever")
-            logger.info(f"Using {len(retrieved_docs_for_sources)} for sources, {len(retrieved_docs_for_llm)} for LLM")
-            for i, doc in enumerate(retrieved_docs_for_llm[:3]):  # 只打印前3个
-                logger.info(f"Doc #{i+1}: {doc.metadata.get('source', 'Unknown')} - {doc.page_content[:100]}...")
-            
-            # 格式化参考来源 - 使用更多候选文档
-            sources = self._format_sources(retrieved_docs_for_sources)
-            
-            # 获取LLM
+            # 获取LLM（必需）
             llm = self.llm_manager.get_llm()
             if not llm:
                 return {
@@ -81,8 +52,46 @@ class QueryService(QueryServiceInterface):
                     "message": "LLM not available. Please check if LLM is configured."
                 }
             
-            # 直接使用检索到的文档生成回答，确保完全一致
-            result = self._generate_answer_with_docs(query, retrieved_docs_for_llm, llm)
+            # 尝试获取向量存储和检索相关文档（可选）
+            vector_store = self.vector_store_manager.get_store()
+            retrieved_docs_for_llm = []
+            sources = []
+            
+            if vector_store:
+                # 知识库已初始化，进行检索
+                try:
+                    collection = vector_store._collection
+                    total_count = collection.count()
+                    logger.info(f"Knowledge base contains {total_count} total chunks")
+                except Exception as e:
+                    logger.warning(f"Could not get collection count: {e}")
+                
+                # 创建混合检索器
+                retriever = self._create_hybrid_retriever(vector_store)
+                all_retrieved_docs = retriever.get_relevant_documents(query)
+                
+                # 放宽文档数量限制，允许更多候选文档用于参考来源显示
+                max_candidates = SEARCH_K * 2  # 允许更多候选文档
+                retrieved_docs_for_sources = all_retrieved_docs[:max_candidates] if len(all_retrieved_docs) > max_candidates else all_retrieved_docs
+                retrieved_docs_for_llm = all_retrieved_docs[:SEARCH_K] if len(all_retrieved_docs) > SEARCH_K else all_retrieved_docs
+                
+                # 添加调试信息
+                logger.info(f"Retrieved {len(all_retrieved_docs)} documents from hybrid retriever")
+                logger.info(f"Using {len(retrieved_docs_for_sources)} for sources, {len(retrieved_docs_for_llm)} for LLM")
+                for i, doc in enumerate(retrieved_docs_for_llm[:3]):  # 只打印前3个
+                    logger.info(f"Doc #{i+1}: {doc.metadata.get('source', 'Unknown')} - {doc.page_content[:100]}...")
+                
+                # 格式化参考来源 - 使用更多候选文档
+                sources = self._format_sources(retrieved_docs_for_sources)
+            else:
+                # 知识库未初始化，不进行检索
+                logger.info("Knowledge base not initialized, proceeding without document retrieval")
+            
+            if chat_history:
+                logger.info(f"Chat history provided: {len(chat_history)} previous turns")
+            
+            # 生成回答（无论是否有文档）
+            result = self._generate_answer_with_docs(query, retrieved_docs_for_llm, llm, chat_history)
             
             return {
                 "status": "success",
@@ -104,38 +113,47 @@ class QueryService(QueryServiceInterface):
                 "message": error_message
             }
     
-    def process_stream_query(self, query: str) -> Generator[str, None, None]:
-        """处理流式查询请求"""
+    def process_stream_query(self, query: str, chat_history: list = None) -> Generator[str, None, None]:
+        """处理流式查询请求
+        
+        Args:
+            query: 用户查询
+            chat_history: 对话历史，格式为 [{"question": "问题", "answer": "回答"}, ...]
+        """
         try:
-            # 先获取向量存储和检索相关文档
-            vector_store = self.vector_store_manager.get_store()
-            if not vector_store:
-                yield self._create_sse_event("error", "Vector store not available")
-                return
-            
-            # 创建混合检索器
-            retriever = self._create_hybrid_retriever(vector_store)
-            all_retrieved_docs = retriever.get_relevant_documents(query)
-            
-            # 放宽文档数量限制，允许更多候选文档用于参考来源显示
-            max_candidates = SEARCH_K * 2  # 允许更多候选文档
-            retrieved_docs_for_sources = all_retrieved_docs[:max_candidates] if len(all_retrieved_docs) > max_candidates else all_retrieved_docs
-            retrieved_docs_for_llm = all_retrieved_docs[:SEARCH_K] if len(all_retrieved_docs) > SEARCH_K else all_retrieved_docs
-            
-            # 格式化并发送参考来源 - 使用更多候选文档
-            sources = self._format_sources(retrieved_docs_for_sources)
-            yield self._create_sse_event("sources", sources)
-            
-            # 获取LLM
+            # 获取LLM（必需）
             llm = self.llm_manager.get_llm()
             if not llm:
                 yield self._create_sse_event("error", "LLM not available")
                 return
             
-            # 流式生成答案 - 使用相同的文档
+            # 尝试获取向量存储和检索相关文档（可选）
+            vector_store = self.vector_store_manager.get_store()
+            retrieved_docs_for_llm = []
+            sources = []
+            
+            if vector_store:
+                # 知识库已初始化，进行检索
+                retriever = self._create_hybrid_retriever(vector_store)
+                all_retrieved_docs = retriever.get_relevant_documents(query)
+                
+                # 放宽文档数量限制，允许更多候选文档用于参考来源显示
+                max_candidates = SEARCH_K * 2  # 允许更多候选文档
+                retrieved_docs_for_sources = all_retrieved_docs[:max_candidates] if len(all_retrieved_docs) > max_candidates else all_retrieved_docs
+                retrieved_docs_for_llm = all_retrieved_docs[:SEARCH_K] if len(all_retrieved_docs) > SEARCH_K else all_retrieved_docs
+                
+                # 格式化并发送参考来源 - 使用更多候选文档
+                sources = self._format_sources(retrieved_docs_for_sources)
+                yield self._create_sse_event("sources", sources)
+            else:
+                # 知识库未初始化，不进行检索
+                logger.info("Knowledge base not initialized, proceeding without document retrieval")
+                yield self._create_sse_event("sources", [])
+            
+            # 流式生成答案（无论是否有文档）
             try:
                 # 使用指定文档进行流式生成
-                for chunk in self._stream_answer_with_docs(query, retrieved_docs_for_llm, llm):
+                for chunk in self._stream_answer_with_docs(query, retrieved_docs_for_llm, llm, chat_history):
                     if chunk:
                         yield self._create_sse_event("token", chunk)
                 
@@ -222,6 +240,33 @@ class QueryService(QueryServiceInterface):
         
         return sources
     
+    def _format_chat_history(self, chat_history: list = None) -> str:
+        """格式化对话历史为字符串
+        
+        Args:
+            chat_history: 对话历史，格式为 [{"question": "问题", "answer": "回答"}, ...]
+        
+        Returns:
+            格式化后的对话历史字符串
+        """
+        if not chat_history or len(chat_history) == 0:
+            return ""
+        
+        # 限制历史对话数量，避免token过多（只保留最近5轮对话）
+        recent_history = chat_history[-5:] if len(chat_history) > 5 else chat_history
+        
+        formatted = []
+        formatted.append("**对话历史**：")
+        for i, turn in enumerate(recent_history, 1):
+            question = turn.get("question", "")
+            answer = turn.get("answer", "")
+            if question and answer:
+                formatted.append(f"\n第{i}轮对话：")
+                formatted.append(f"用户：{question}")
+                formatted.append(f"助手：{answer}")
+        
+        return "\n".join(formatted) if formatted else ""
+    
     def _format_sources(self, docs: list) -> list:
         """格式化源文档，智能显示不同的相关片段"""
         sources = []
@@ -279,41 +324,76 @@ class QueryService(QueryServiceInterface):
         
         return sources
     
-    def _generate_answer_with_docs(self, query: str, docs: list, llm) -> str:
-        """使用指定的文档生成回答"""
+    def _generate_answer_with_docs(self, query: str, docs: list, llm, chat_history: list = None) -> str:
+        """使用指定的文档生成回答
+        
+        Args:
+            query: 用户查询
+            docs: 检索到的文档列表（如果为空，则不使用文档）
+            llm: LLM实例
+            chat_history: 对话历史，格式为 [{"question": "问题", "answer": "回答"}, ...]
+        """
         try:
-            # 创建提示模板
             from langchain.prompts import PromptTemplate
-            from prompts import GENERAL_QA_PROMPT_TEMPLATE
-            
-            prompt = PromptTemplate(
-                template=GENERAL_QA_PROMPT_TEMPLATE,
-                input_variables=["context", "question"]
-            )
-            
-            # 格式化文档内容
-            def format_docs(docs):
-                formatted = []
-                for i, doc in enumerate(docs, 1):
-                    source = doc.metadata.get('source', 'Unknown')
-                    content = doc.page_content
-                    formatted.append(f"[文档{i} - {source}]\n{content}")
-                return "\n\n" + "="*50 + "\n\n".join(formatted)
-            
-            context = format_docs(docs)
-            
-            # 记录传递给LLM的确切内容
-            logger.info(f"Sending {len(docs)} documents to LLM:")
-            for i, doc in enumerate(docs, 1):
-                source = doc.metadata.get('source', 'Unknown')
-                logger.info(f"  Doc {i}: {source} ({len(doc.page_content)} chars)")
-            
-            # 创建输出解析器
             from langchain_core.output_parsers import StrOutputParser
             
-            # 直接调用LLM
-            chain = prompt | llm | StrOutputParser()
-            result = chain.invoke({"context": context, "question": query})
+            # 格式化对话历史
+            formatted_history = self._format_chat_history(chat_history)
+            
+            # 根据是否有文档选择不同的提示模板
+            if docs and len(docs) > 0:
+                # 有文档，使用文档问答模板
+                from prompts import GENERAL_QA_PROMPT_TEMPLATE
+                
+                prompt = PromptTemplate(
+                    template=GENERAL_QA_PROMPT_TEMPLATE,
+                    input_variables=["context", "question", "chat_history"]
+                )
+                
+                # 格式化文档内容
+                def format_docs(docs):
+                    formatted = []
+                    for i, doc in enumerate(docs, 1):
+                        source = doc.metadata.get('source', 'Unknown')
+                        content = doc.page_content
+                        formatted.append(f"[文档{i} - {source}]\n{content}")
+                    return "\n\n" + "="*50 + "\n\n".join(formatted)
+                
+                context = format_docs(docs)
+                
+                # 记录传递给LLM的确切内容
+                logger.info(f"Sending {len(docs)} documents to LLM:")
+                for i, doc in enumerate(docs, 1):
+                    source = doc.metadata.get('source', 'Unknown')
+                    logger.info(f"  Doc {i}: {source} ({len(doc.page_content)} chars)")
+                
+                # 调用LLM
+                chain = prompt | llm | StrOutputParser()
+                result = chain.invoke({
+                    "context": context,
+                    "question": query,
+                    "chat_history": formatted_history
+                })
+            else:
+                # 无文档，使用通用问答模板
+                from prompts import GENERAL_QA_PROMPT_TEMPLATE_NO_DOCS
+                
+                prompt = PromptTemplate(
+                    template=GENERAL_QA_PROMPT_TEMPLATE_NO_DOCS,
+                    input_variables=["question", "chat_history"]
+                )
+                
+                logger.info("No documents available, using general QA template")
+                
+                # 调用LLM
+                chain = prompt | llm | StrOutputParser()
+                result = chain.invoke({
+                    "question": query,
+                    "chat_history": formatted_history
+                })
+            
+            if chat_history:
+                logger.info(f"Including {len(chat_history)} previous conversation turns")
             
             return result
             
@@ -321,38 +401,73 @@ class QueryService(QueryServiceInterface):
             logger.error(f"Failed to generate answer with docs: {e}")
             return f"生成回答时出错: {str(e)}"
     
-    def _stream_answer_with_docs(self, query: str, docs: list, llm) -> Generator[str, None, None]:
-        """使用指定的文档流式生成回答"""
+    def _stream_answer_with_docs(self, query: str, docs: list, llm, chat_history: list = None) -> Generator[str, None, None]:
+        """使用指定的文档流式生成回答
+        
+        Args:
+            query: 用户查询
+            docs: 检索到的文档列表（如果为空，则不使用文档）
+            llm: LLM实例
+            chat_history: 对话历史，格式为 [{"question": "问题", "answer": "回答"}, ...]
+        """
         try:
-            # 创建提示模板
             from langchain.prompts import PromptTemplate
-            from prompts import GENERAL_QA_PROMPT_TEMPLATE
-            
-            prompt = PromptTemplate(
-                template=GENERAL_QA_PROMPT_TEMPLATE,
-                input_variables=["context", "question"]
-            )
-            
-            # 格式化文档内容（与非流式版本保持一致）
-            def format_docs(docs):
-                formatted = []
-                for i, doc in enumerate(docs, 1):
-                    source = doc.metadata.get('source', 'Unknown')
-                    content = doc.page_content
-                    formatted.append(f"[文档{i} - {source}]\n{content}")
-                return "\n\n" + "="*50 + "\n\n".join(formatted)
-            
-            context = format_docs(docs)
-            
-            # 创建输出解析器
             from langchain_core.output_parsers import StrOutputParser
             
-            # 创建流式链
-            chain = prompt | llm | StrOutputParser()
+            # 格式化对话历史
+            formatted_history = self._format_chat_history(chat_history)
             
-            # 流式调用
-            for chunk in chain.stream({"context": context, "question": query}):
-                yield chunk
+            # 根据是否有文档选择不同的提示模板
+            if docs and len(docs) > 0:
+                # 有文档，使用文档问答模板
+                from prompts import GENERAL_QA_PROMPT_TEMPLATE
+                
+                prompt = PromptTemplate(
+                    template=GENERAL_QA_PROMPT_TEMPLATE,
+                    input_variables=["context", "question", "chat_history"]
+                )
+                
+                # 格式化文档内容（与非流式版本保持一致）
+                def format_docs(docs):
+                    formatted = []
+                    for i, doc in enumerate(docs, 1):
+                        source = doc.metadata.get('source', 'Unknown')
+                        content = doc.page_content
+                        formatted.append(f"[文档{i} - {source}]\n{content}")
+                    return "\n\n" + "="*50 + "\n\n".join(formatted)
+                
+                context = format_docs(docs)
+                
+                # 创建流式链
+                chain = prompt | llm | StrOutputParser()
+                
+                # 流式调用
+                for chunk in chain.stream({
+                    "context": context,
+                    "question": query,
+                    "chat_history": formatted_history
+                }):
+                    yield chunk
+            else:
+                # 无文档，使用通用问答模板
+                from prompts import GENERAL_QA_PROMPT_TEMPLATE_NO_DOCS
+                
+                prompt = PromptTemplate(
+                    template=GENERAL_QA_PROMPT_TEMPLATE_NO_DOCS,
+                    input_variables=["question", "chat_history"]
+                )
+                
+                logger.info("No documents available, using general QA template for streaming")
+                
+                # 创建流式链
+                chain = prompt | llm | StrOutputParser()
+                
+                # 流式调用
+                for chunk in chain.stream({
+                    "question": query,
+                    "chat_history": formatted_history
+                }):
+                    yield chunk
                 
         except Exception as e:
             logger.error(f"Failed to stream answer with docs: {e}")
