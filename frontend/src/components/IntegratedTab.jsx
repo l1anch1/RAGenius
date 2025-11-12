@@ -28,6 +28,13 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 	const [showSourcesModal, setShowSourcesModal] = useState(false);
 	const [uploading, setUploading] = useState(false);
 	const fileInputRef = useRef(null);
+	
+	// 文档预览相关状态
+	const [previewDoc, setPreviewDoc] = useState(null);
+	const [previewData, setPreviewData] = useState(null);
+	const [previewLoading, setPreviewLoading] = useState(false);
+	const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
+	const previewTimeoutRef = useRef(null);
 
 	// 自动清除成功消息
 	useEffect(() => {
@@ -79,6 +86,82 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 		} catch (error) {
 			console.error('Failed to fetch vectorized documents:', error);
 		}
+	};
+	
+	// 获取文档预览
+	const fetchDocumentPreview = async (filename) => {
+		setPreviewLoading(true);
+		try {
+			const encodedFilename = encodeURIComponent(filename);
+			const response = await fetch(`/api/documents/preview/${encodedFilename}?max_length=500`);
+			const data = await response.json();
+			
+			if (data.status === 'success') {
+				setPreviewData(data);
+			} else {
+				setPreviewData({
+					status: 'error',
+					preview: '无法加载预览'
+				});
+			}
+		} catch (error) {
+			console.error('Failed to fetch document preview:', error);
+			setPreviewData({
+				status: 'error',
+				preview: '加载预览失败'
+			});
+		} finally {
+			setPreviewLoading(false);
+		}
+	};
+	
+	// 处理鼠标悬停
+	const handleMouseEnter = (doc, event) => {
+		// 清除之前的定时器
+		if (previewTimeoutRef.current) {
+			clearTimeout(previewTimeoutRef.current);
+		}
+		
+		// 获取鼠标位置 - 在元素左侧显示预览
+		const rect = event.currentTarget.getBoundingClientRect();
+		const previewWidth = 280;
+		setPreviewPosition({
+			x: rect.left - previewWidth - 15, // 在元素左侧显示，留15px间距
+			y: rect.top
+		});
+		
+		// 延迟500ms后显示预览
+		previewTimeoutRef.current = setTimeout(() => {
+			setPreviewDoc(doc);
+			fetchDocumentPreview(doc);
+		}, 500);
+	};
+	
+	// 处理鼠标移动
+	const handleMouseMove = (event) => {
+		if (previewDoc) {
+			// 如果预览已经显示，不更新位置，避免抖动
+			return;
+		}
+		// 实时更新鼠标位置
+		const rect = event.currentTarget.getBoundingClientRect();
+		const previewWidth = 280;
+		setPreviewPosition({
+			x: rect.left - previewWidth - 15,
+			y: rect.top
+		});
+	};
+	
+	// 处理鼠标离开
+	const handleMouseLeave = () => {
+		// 清除定时器
+		if (previewTimeoutRef.current) {
+			clearTimeout(previewTimeoutRef.current);
+		}
+		
+		// 立即关闭预览
+		setPreviewDoc(null);
+		setPreviewData(null);
 	};
 
 	// 上传文件
@@ -667,6 +750,72 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 				</div>
 			)}
 
+			{/* 文档预览弹窗 - macOS Quick Look 风格 */}
+			{previewDoc && (
+				<div 
+					className="fixed z-[60] overflow-hidden"
+					style={{
+						left: `${previewPosition.x}px`,
+						top: `${previewPosition.y}px`,
+						width: '280px',
+						maxHeight: '400px',
+						animation: 'quickFadeIn 0.2s ease-out',
+						pointerEvents: 'none',
+						boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15), 0 0 0 0.5px rgba(0, 0, 0, 0.1)',
+						borderRadius: '12px',
+						backgroundColor: 'white'
+					}}
+				>
+					{/* 预览头部 - macOS 风格 */}
+					<div className="px-3 py-2.5 bg-gradient-to-b from-gray-50 to-white border-b border-gray-200">
+						<div className="flex items-center space-x-2.5">
+							<div className="text-2xl flex-shrink-0">
+								{previewDoc.endsWith('.pdf') ? '📕' : 
+								 previewDoc.endsWith('.txt') ? '📄' : 
+								 previewDoc.endsWith('.md') ? '📝' : 
+								 previewDoc.endsWith('.csv') ? '📊' : 
+								 previewDoc.endsWith('.docx') || previewDoc.endsWith('.doc') ? '📘' : '📄'}
+							</div>
+							<div className="flex-1 min-w-0">
+								<h4 className="text-xs font-semibold text-gray-900 truncate leading-tight">{previewDoc}</h4>
+								{previewData && previewData.size && (
+									<p className="text-[10px] text-gray-500 mt-0.5">
+										{(previewData.size / 1024).toFixed(1)} KB
+									</p>
+								)}
+							</div>
+						</div>
+					</div>
+					
+					{/* 预览内容区域 - 模拟文档第一页 */}
+					<div className="bg-white" style={{ height: '320px' }}>
+						{previewLoading ? (
+							<div className="flex items-center justify-center h-full bg-gray-50">
+								<div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+							</div>
+						) : previewData ? (
+							<div className="h-full overflow-hidden relative">
+								{/* 文档内容预览 - 白色纸张效果 */}
+								<div className="h-full bg-white p-5 overflow-hidden">
+									<div className="text-[10px] leading-[1.4] text-gray-800 font-sans whitespace-pre-wrap break-words" 
+										style={{ 
+											fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+										}}>
+										{previewData.preview}
+									</div>
+								</div>
+								{/* 底部渐变遮罩 */}
+								<div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white via-white/50 to-transparent pointer-events-none"></div>
+								{/* 纸张阴影效果 */}
+								<div className="absolute inset-0 pointer-events-none" style={{
+									boxShadow: 'inset 0 0 0 1px rgba(0, 0, 0, 0.03)'
+								}}></div>
+							</div>
+						) : null}
+					</div>
+				</div>
+			)}
+
 			{/* 侧边栏 - 文档管理 */}
 			<div className="fixed right-0 top-0 h-full w-80 bg-white border-l border-gray-200 transform translate-x-full transition-transform duration-300 ease-in-out z-50" id="sidebar">
 				<div className="p-6 flex flex-col h-full">
@@ -723,15 +872,21 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 					)}
 
 					{/* 文档列表 */}
-					<div className="flex-1 space-y-2 overflow-y-auto">
+					<div className="flex-1 space-y-2 overflow-y-auto relative">
 						{documents.length > 0 ? (
 							// 去重：确保每个文件只显示一次
 							Array.from(new Set(documents)).map((doc) => {
 								const isVectorized = vectorizedDocuments.includes(doc);
 								return (
-									<div key={doc} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50">
-										<div className="flex items-center space-x-3">
-											<div className="text-lg">
+									<div 
+										key={doc} 
+										className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 gap-3 cursor-pointer transition-colors relative"
+										onMouseEnter={(e) => handleMouseEnter(doc, e)}
+										onMouseMove={handleMouseMove}
+										onMouseLeave={handleMouseLeave}
+									>
+										<div className="flex items-center space-x-3 flex-1 min-w-0">
+											<div className="text-lg flex-shrink-0">
 												{doc.endsWith('.pdf') ? '📕' : 
 												 doc.endsWith('.txt') ? '📄' : 
 												 doc.endsWith('.md') ? '📝' : 
@@ -742,7 +897,7 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 												<p className="text-sm font-medium text-gray-900 truncate">{doc}</p>
 											</div>
 										</div>
-										<div className={`w-2 h-2 rounded-full ${isVectorized ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+										<div className={`w-2 h-2 rounded-full flex-shrink-0 ${isVectorized ? 'bg-green-500' : 'bg-gray-300'}`}></div>
 									</div>
 								);
 							})

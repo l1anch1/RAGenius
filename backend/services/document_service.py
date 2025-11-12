@@ -123,6 +123,93 @@ class DocumentService(DocumentServiceInterface):
         with self._lock:
             return self._in_memory_documents.copy()
     
+    def get_document_preview(self, filename: str, max_length: int = 1000) -> Dict[str, Any]:
+        """获取文档预览内容
+        
+        Args:
+            filename: 文件名
+            max_length: 最大预览字符数，默认1000
+        
+        Returns:
+            预览结果
+        """
+        try:
+            with self._lock:
+                if filename not in self._in_memory_documents:
+                    return {
+                        "status": "error",
+                        "message": f"Document '{filename}' not found"
+                    }
+                
+                file_content = self._in_memory_documents[filename]
+                file_ext = os.path.splitext(filename)[1].lower()
+                
+                # 根据文件类型处理预览
+                preview_text = ""
+                
+                if file_ext in ['.txt', '.md', '.csv']:
+                    # 文本文件直接解码
+                    try:
+                        preview_text = file_content.decode('utf-8')
+                    except UnicodeDecodeError:
+                        try:
+                            preview_text = file_content.decode('gbk')
+                        except:
+                            preview_text = file_content.decode('latin-1')
+                
+                elif file_ext == '.pdf':
+                    # PDF文件需要特殊处理
+                    try:
+                        import PyPDF2
+                        pdf_file = io.BytesIO(file_content)
+                        pdf_reader = PyPDF2.PdfReader(pdf_file)
+                        
+                        # 读取前几页
+                        pages_to_read = min(3, len(pdf_reader.pages))
+                        for page_num in range(pages_to_read):
+                            page = pdf_reader.pages[page_num]
+                            preview_text += page.extract_text() + "\n\n"
+                    except Exception as e:
+                        logger.warning(f"Failed to extract PDF text: {e}")
+                        preview_text = f"[PDF 文件，共 {len(file_content)} 字节]\n无法提取文本预览"
+                
+                elif file_ext in ['.docx', '.doc']:
+                    # Word文档需要特殊处理
+                    try:
+                        from docx import Document
+                        doc_file = io.BytesIO(file_content)
+                        doc = Document(doc_file)
+                        
+                        # 读取前几段
+                        paragraphs_to_read = min(10, len(doc.paragraphs))
+                        for i in range(paragraphs_to_read):
+                            preview_text += doc.paragraphs[i].text + "\n\n"
+                    except Exception as e:
+                        logger.warning(f"Failed to extract Word text: {e}")
+                        preview_text = f"[Word 文件，共 {len(file_content)} 字节]\n无法提取文本预览"
+                
+                else:
+                    preview_text = f"[不支持的文件格式: {file_ext}]"
+                
+                # 截断到指定长度
+                if len(preview_text) > max_length:
+                    preview_text = preview_text[:max_length] + "\n\n... (内容已截断)"
+                
+                return {
+                    "status": "success",
+                    "filename": filename,
+                    "preview": preview_text,
+                    "size": len(file_content),
+                    "type": file_ext
+                }
+        
+        except Exception as e:
+            logger.error(f"Failed to get document preview: {e}")
+            return {
+                "status": "error",
+                "message": f"Failed to get document preview: {str(e)}"
+            }
+    
     def rebuild_knowledge_base(self) -> Dict[str, Any]:
         """重建知识库（从内存中的文档）"""
         try:

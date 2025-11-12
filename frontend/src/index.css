@@ -337,3 +337,27 @@ code:not(pre code) {
 .notification-exit {
   animation: slideOutToTop 0.3s ease-in forwards;
 }
+
+/* 文档预览淡入动画 */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) translateX(-50%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+/* macOS 风格快速淡入动画 */
+@keyframes quickFadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(-8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

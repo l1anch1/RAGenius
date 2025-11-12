@@ -61,4 +61,22 @@ def create_documents_blueprint(document_service: DocumentService) -> Blueprint:
             logger.error(f"Error in upload_document: {e}")
             return jsonify({"status": "error", "message": str(e)}), 500
     
+    @documents_bp.route("/api/documents/preview/<path:filename>", methods=["GET"])
+    def preview_document(filename):
+        """获取文档预览"""
+        try:
+            # 获取查询参数中的最大长度
+            max_length = request.args.get('max_length', default=1000, type=int)
+            
+            result = document_service.get_document_preview(filename, max_length)
+            
+            if result['status'] == 'error':
+                return jsonify(result), 404
+            
+            return jsonify(result)
+            
+        except Exception as e:
+            logger.error(f"Error in preview_document: {e}")
+            return jsonify({"status": "error", "message": str(e)}), 500
+    
     return documents_bp
