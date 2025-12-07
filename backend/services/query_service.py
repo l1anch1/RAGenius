@@ -68,7 +68,7 @@ class QueryService(QueryServiceInterface):
                 
                 # 创建混合检索器
                 retriever = self._create_hybrid_retriever(vector_store)
-                all_retrieved_docs = retriever.get_relevant_documents(query)
+                all_retrieved_docs = retriever.invoke(query)
                 
                 # 放宽文档数量限制，允许更多候选文档用于参考来源显示
                 max_candidates = SEARCH_K * 2  # 允许更多候选文档
@@ -135,7 +135,7 @@ class QueryService(QueryServiceInterface):
             if vector_store:
                 # 知识库已初始化，进行检索
                 retriever = self._create_hybrid_retriever(vector_store)
-                all_retrieved_docs = retriever.get_relevant_documents(query)
+                all_retrieved_docs = retriever.invoke(query)
                 
                 # 放宽文档数量限制，允许更多候选文档用于参考来源显示
                 max_candidates = SEARCH_K * 2  # 允许更多候选文档
@@ -197,7 +197,7 @@ class QueryService(QueryServiceInterface):
             retriever = vector_store.as_retriever(search_kwargs={"k": SEARCH_K})
             
             # 创建提示模板
-            from langchain.prompts import PromptTemplate
+            from langchain_core.prompts import PromptTemplate
             from prompts import GENERAL_QA_PROMPT_TEMPLATE
             
             prompt = PromptTemplate(
@@ -334,7 +334,7 @@ class QueryService(QueryServiceInterface):
             chat_history: 对话历史，格式为 [{"question": "问题", "answer": "回答"}, ...]
         """
         try:
-            from langchain.prompts import PromptTemplate
+            from langchain_core.prompts import PromptTemplate
             from langchain_core.output_parsers import StrOutputParser
             
             # 格式化对话历史
@@ -411,7 +411,7 @@ class QueryService(QueryServiceInterface):
             chat_history: 对话历史，格式为 [{"question": "问题", "answer": "回答"}, ...]
         """
         try:
-            from langchain.prompts import PromptTemplate
+            from langchain_core.prompts import PromptTemplate
             from langchain_core.output_parsers import StrOutputParser
             
             # 格式化对话历史

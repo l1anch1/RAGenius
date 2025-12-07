@@ -1,59 +1,89 @@
 #!/bin/bash
 
-# RAGenius 启动脚本
-echo "Starting RAGenius..."
+# RAGenius Startup Script
+# For local development environment
 
-# 清理旧进程
-echo "Cleaning up old processes..."
-pkill -f "python.*app" 2>/dev/null
-pkill -f "npm run dev" 2>/dev/null
+set -e
+
+# Get script directory (project root)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+echo "🚀 Starting RAGenius..."
+echo "📁 Project directory: $SCRIPT_DIR"
+
+# Clean up old processes
+echo "🧹 Cleaning up old processes..."
+pkill -f "python.*app.py" 2>/dev/null || true
+pkill -f "npm run dev" 2>/dev/null || true
 sleep 2
 
-# 激活conda环境
-source ~/miniconda3/etc/profile.d/conda.sh
-conda activate RAG
+# Check Python environment
+if command -v python3 &> /dev/null; then
+    PYTHON_CMD="python3"
+elif command -v python &> /dev/null; then
+    PYTHON_CMD="python"
+else
+    echo "❌ Python not found. Please install Python 3.8+"
+    exit 1
+fi
 
-# 设置PYTHONPATH
-export PYTHONPATH=/Users/lianchi/Documents/CS/RAGenius/backend:$PYTHONPATH
+echo "🐍 Using Python: $($PYTHON_CMD --version)"
 
-# 清理函数
+# Set PYTHONPATH
+export PYTHONPATH="$SCRIPT_DIR/backend:$PYTHONPATH"
+
+# Cleanup function
 cleanup() {
-    echo "Stopping all services..."
+    echo ""
+    echo "🛑 Stopping all services..."
     if [ ! -z "$FLASK_PID" ]; then
-        kill $FLASK_PID 2>/dev/null
+        kill $FLASK_PID 2>/dev/null || true
     fi
     if [ ! -z "$VITE_PID" ]; then
-        kill $VITE_PID 2>/dev/null
+        kill $VITE_PID 2>/dev/null || true
     fi
-    pkill -f "python.*app" 2>/dev/null
-    pkill -f "npm run dev" 2>/dev/null
+    pkill -f "python.*app.py" 2>/dev/null || true
+    pkill -f "npm run dev" 2>/dev/null || true
+    echo "👋 Goodbye!"
     exit 0
 }
 
-# 设置信号处理
+# Set signal handlers
 trap cleanup EXIT INT TERM
 
-# 启动后端
-echo "Starting backend..."
-cd /Users/lianchi/Documents/CS/RAGenius
-( PYTHONPATH=/Users/lianchi/Documents/CS/RAGenius/backend python3 backend/app.py ) &
+# Start backend
+echo "🔧 Starting backend..."
+cd "$SCRIPT_DIR"
+PYTHONPATH="$SCRIPT_DIR/backend" $PYTHON_CMD backend/app.py &
 FLASK_PID=$!
-echo "Backend started with PID: $FLASK_PID"
+echo "✅ Backend started with PID: $FLASK_PID"
 
-# 等待后端启动
+# Wait for backend to start
 sleep 5
 
-# 启动前端
-echo "Starting frontend..."
-cd /Users/lianchi/Documents/CS/RAGenius/frontend
+# Check frontend dependencies
+if [ ! -d "$SCRIPT_DIR/frontend/node_modules" ]; then
+    echo "📦 Installing frontend dependencies..."
+    cd "$SCRIPT_DIR/frontend"
+    npm install
+fi
+
+# Start frontend
+echo "🎨 Starting frontend..."
+cd "$SCRIPT_DIR/frontend"
 npm run dev &
 VITE_PID=$!
-echo "Frontend started with PID: $VITE_PID"
+echo "✅ Frontend started with PID: $VITE_PID"
 
-echo "All services started!"
-echo "Backend: http://localhost:8000"
-echo "Frontend: http://localhost:3000"
+echo ""
+echo "=========================================="
+echo "🎉 All services started!"
+echo "📡 Backend:  http://localhost:8000"
+echo "🌐 Frontend: http://localhost:3000"
+echo "=========================================="
 echo "Press Ctrl+C to stop all services"
+echo ""
 
-# 等待进程
+# Wait for processes
 wait

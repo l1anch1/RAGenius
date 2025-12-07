@@ -380,7 +380,7 @@ class ChromaVectorStoreManager(VectorStoreInterface):
     def _process_documents(self, documents: List[Any]) -> List[Any]:
         """处理文档为chunks"""
         try:
-            from langchain.text_splitter import RecursiveCharacterTextSplitter
+            from langchain_text_splitters import RecursiveCharacterTextSplitter
             
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=CHUNK_SIZE,
