@@ -72,27 +72,95 @@ RAGenius
 ```
 
 # Installation
+
+## Option 1: Docker (Recommended)
+
+The easiest way to run RAGenius is with Docker. No need to install Python, Node.js, or manage dependencies manually.
+
+### Prerequisites
+- [Docker](https://docs.docker.com/get-docker/) installed
+- [Docker Compose](https://docs.docker.com/compose/install/) installed
+
+### Quick Start
+
 1. Clone the repository:
+```bash
+git clone https://github.com/l1anch1/DeepSeek-RAG.git
+cd RAGenius
 ```
+
+2. Copy the environment example and configure:
+```bash
+cp .env.example .env
+# Edit .env with your settings (API keys, etc.)
+```
+
+3. Build and start the containers:
+```bash
+docker-compose up -d --build
+```
+
+4. Access the application:
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8000
+
+### Docker Commands
+
+```bash
+# Start services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+
+# Rebuild after code changes
+docker-compose up -d --build
+
+# Clean up (including volumes)
+docker-compose down -v
+```
+
+### Using Local Ollama Models with Docker
+
+If you want to use local Ollama models instead of OpenAI API:
+
+1. Install and run Ollama on your host machine
+2. Pull your desired model: `ollama pull deepseek-r1:14b`
+3. Set in `.env`:
+   ```
+   LLM_USE_OPENAI=false
+   LLM_LOCAL_MODEL=deepseek-r1:14b
+   ```
+4. The Docker container will connect to Ollama via `host.docker.internal`
+
+---
+
+## Option 2: Manual Installation
+
+1. Clone the repository:
+```bash
 git clone https://github.com/l1anch1/DeepSeek-RAG.git
 cd RAGenius
 ```
  
 2. Create and activate a virtual environment (recommended):
-```
+```bash
 conda create -n deepseek-rag python=3.9
 conda activate deepseek-rag
 ``` 
 
 3. Install dependencies:
-```
+```bash
 pip install -r backend/requirements.txt 
 ``` 
 
 4. For local models, install Ollama following instructions at <https://ollama.com/>
 
 5. Pull the DeepSeek model if using locally:
-```
+```bash
 ollama pull deepseek-r1:14b
 ``` 
 6. For OpenAI API, set your API key and base url(optional) as environment variables in a `.env` file or in your system environment

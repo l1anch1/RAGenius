@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+*.egg
+.mypy_cache/
+.pytest_cache/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.local
+
+# Data directories (mounted as volumes)
+data/
+models_cache/
+
+# Logs
+*.log
+
+# Docker
+Dockerfile
+.dockerignore
+
+# OS
+.DS_Store
+
+

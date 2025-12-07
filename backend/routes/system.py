@@ -16,6 +16,11 @@ def create_system_blueprint(system_service: SystemService, document_service: Doc
     
     system_bp = Blueprint('system', __name__)
     
+    @system_bp.route("/api/health", methods=["GET"])
+    def health_check():
+        """健康检查端点 - 用于 Docker 健康检查"""
+        return jsonify({"status": "healthy", "service": "ragenius-backend"})
+    
     @system_bp.route("/api/info", methods=["GET"])
     def get_info():
         """获取系统信息"""

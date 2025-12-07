@@ -14,11 +14,13 @@ BASE_DIR = str(Path(__file__).resolve().parent.parent)  # Project root directory
 VECTOR_DB_DIR = os.getenv("VECTOR_DB_DIR", os.path.join(BASE_DIR, "data", "vectordb"))
 
 # LLM model settings
-LLM_USE_OPENAI = True
+LLM_USE_OPENAI = os.getenv("LLM_USE_OPENAI", "true").lower() in ("true", "1", "yes")
 LLM_OPENAI_API_KEY = os.environ.get("LLM_OPENAI_API_KEY", "")
 LLM_OPENAI_MODEL = os.environ.get("LLM_OPENAI_MODEL", "gpt-4o")
 LLM_OPENAI_API_BASE = os.environ.get("LLM_OPENAI_API_BASE", "")
 LLM_LOCAL_MODEL = os.getenv("LLM_LOCAL_MODEL", "deepseek-r1:14b")
+# Ollama base URL - use host.docker.internal in Docker environment
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.1"))
 LLM_TOP_P = float(os.getenv("LLM_TOP_P", "0.6"))
 LLM_NUM_CTX = int(os.getenv("LLM_NUM_CTX", "8192"))

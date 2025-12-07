@@ -1,0 +1,70 @@
+services:
+  # Backend service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ragenius-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DEVICE=${DEVICE:-cpu}
+      - VECTOR_DB_DIR=/app/data/vectordb
+      - LLM_USE_OPENAI=${LLM_USE_OPENAI:-true}
+      - LLM_OPENAI_API_KEY=${LLM_OPENAI_API_KEY:-}
+      - LLM_OPENAI_MODEL=${LLM_OPENAI_MODEL:-gpt-4o}
+      - LLM_OPENAI_API_BASE=${LLM_OPENAI_API_BASE:-}
+      - LLM_LOCAL_MODEL=${LLM_LOCAL_MODEL:-deepseek-r1:14b}
+      # Ollama base URL - use host.docker.internal for Docker on Mac/Windows
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
+      - LLM_TOP_P=${LLM_TOP_P:-0.6}
+      - LLM_NUM_CTX=${LLM_NUM_CTX:-8192}
+      - LLM_NUM_PREDICT=${LLM_NUM_PREDICT:-2048}
+      - LLM_NUM_THREAD=${LLM_NUM_THREAD:-12}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-BAAI/bge-base-zh-v1.5}
+      - CHUNK_SIZE=${CHUNK_SIZE:-600}
+      - CHUNK_OVERLAP=${CHUNK_OVERLAP:-150}
+      - SEARCH_K=${SEARCH_K:-8}
+      - SIMILARITY_WEIGHT=${SIMILARITY_WEIGHT:-0.6}
+      - MMR_WEIGHT=${MMR_WEIGHT:-0.4}
+      - MMR_LAMBDA=${MMR_LAMBDA:-0.7}
+      # HuggingFace cache directory for embedding models
+      - HF_HOME=/app/models_cache
+      - TRANSFORMERS_CACHE=/app/models_cache
+    volumes:
+      # Persist vector database
+      - vectordb_data:/app/data/vectordb
+      # Persist/cache embedding models (optional: mount local cache)
+      - models_cache:/app/models_cache
+    networks:
+      - ragenius-network
+    # For connecting to Ollama on host machine (if using local models)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Frontend service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ragenius-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - ragenius-network
+
+networks:
+  ragenius-network:
+    driver: bridge
+
+volumes:
+  vectordb_data:
+    driver: local
+  models_cache:
+    driver: local
+

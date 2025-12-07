@@ -10,7 +10,7 @@ from interfaces.vector_store import EmbeddingInterface, LLMInterface
 from managers.cache_manager import CacheManager
 from config import (
     LLM_USE_OPENAI, LLM_OPENAI_MODEL, LLM_OPENAI_API_KEY, LLM_OPENAI_API_BASE,
-    EMBEDDING_MODEL, DEVICE, LLM_TEMPERATURE
+    EMBEDDING_MODEL, DEVICE, LLM_TEMPERATURE, LLM_LOCAL_MODEL, OLLAMA_BASE_URL
 )
 
 logger = logging.getLogger(__name__)
@@ -152,12 +152,18 @@ class LLMManager(LLMInterface):
     def _create_ollama_model(self) -> Optional[Any]:
         """创建Ollama模型"""
         try:
-            from langchain_community.llms import Ollama
+            from langchain_ollama import ChatOllama
             
-            logger.info("Loading Ollama model")
-            llm = Ollama(model="llama2")
+            logger.info(f"Loading Ollama model: {LLM_LOCAL_MODEL}")
+            logger.info(f"Ollama base URL: {OLLAMA_BASE_URL}")
             
-            logger.info("Ollama model loaded successfully")
+            llm = ChatOllama(
+                model=LLM_LOCAL_MODEL,
+                base_url=OLLAMA_BASE_URL,
+                temperature=LLM_TEMPERATURE,
+            )
+            
+            logger.info(f"Ollama model loaded successfully: {LLM_LOCAL_MODEL}")
             return llm
             
         except Exception as e:
