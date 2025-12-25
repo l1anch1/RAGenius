@@ -7,6 +7,7 @@ from typing import Dict, Any
 
 from managers.model_manager import EmbeddingManager, LLMManager
 from managers.vector_store_manager import ChromaVectorStoreManager
+from services.retrieval import RetrievalOrchestrator
 from services.document_service import DocumentService
 from services.query_service import QueryService
 from services.system_service import SystemService
@@ -39,14 +40,18 @@ class DIContainer:
                 embedding_interface=self._instances['embedding_manager']
             )
             
-            # 3. 创建服务
+            # 3. 创建检索编排器
+            self._instances['retrieval_orchestrator'] = RetrievalOrchestrator()
+            
+            # 4. 创建服务
             self._instances['document_service'] = DocumentService(
                 vector_store_manager=self._instances['vector_store_manager']
             )
             
             self._instances['query_service'] = QueryService(
                 vector_store_manager=self._instances['vector_store_manager'],
-                llm_manager=self._instances['llm_manager']
+                llm_manager=self._instances['llm_manager'],
+                retrieval_orchestrator=self._instances['retrieval_orchestrator']
             )
             
             self._instances['system_service'] = SystemService(
@@ -96,6 +101,12 @@ class DIContainer:
         if not self._initialized:
             self.initialize()
         return self._instances['llm_manager']
+    
+    def get_retrieval_orchestrator(self) -> RetrievalOrchestrator:
+        """获取检索编排器"""
+        if not self._initialized:
+            self.initialize()
+        return self._instances['retrieval_orchestrator']
 
 
 # 全局容器实例

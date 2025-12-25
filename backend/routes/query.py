@@ -82,4 +82,54 @@ def create_query_blueprint(query_service: QueryService) -> Blueprint:
             logger.error(f"Error in query_stream: {e}")
             return jsonify({"status": "error", "message": str(e)}), 500
     
+    # ========================================
+    # 检索流水线配置 API
+    # ========================================
+    
+    @query_bp.route("/api/retrieval/config", methods=["GET"])
+    def get_retrieval_config():
+        """获取当前检索流水线配置"""
+        try:
+            pipeline_info = query_service.get_pipeline_info()
+            return jsonify({
+                "status": "success",
+                "config": pipeline_info
+            })
+        except Exception as e:
+            logger.error(f"Error getting retrieval config: {e}")
+            return jsonify({"status": "error", "message": str(e)}), 500
+    
+    @query_bp.route("/api/retrieval/config", methods=["POST"])
+    def update_retrieval_config():
+        """更新检索流水线配置
+        
+        请求体示例:
+        {
+            "query_expansion__enabled": true,
+            "query_expansion__n_subqueries": 5,
+            "hybrid_retrieval__embedding_weight": 0.7,
+            "reranking__enabled": false,
+            "mmr_postprocessing__mode": "always"
+        }
+        """
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({"status": "error", "message": "No configuration provided"}), 400
+            
+            # 更新配置
+            query_service.update_pipeline_config(**data)
+            
+            # 返回更新后的配置
+            pipeline_info = query_service.get_pipeline_info()
+            return jsonify({
+                "status": "success",
+                "message": "Configuration updated",
+                "config": pipeline_info
+            })
+            
+        except Exception as e:
+            logger.error(f"Error updating retrieval config: {e}")
+            return jsonify({"status": "error", "message": str(e)}), 500
+    
     return query_bp

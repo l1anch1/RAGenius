@@ -9,8 +9,15 @@ services:
     ports:
       - "8000:8000"
     environment:
+      # ============================================
+      # 基础设置
+      # ============================================
       - DEVICE=${DEVICE:-cpu}
-      - VECTOR_DB_DIR=/app/data/vectordb
+      - FLASK_ENV=${FLASK_ENV:-production}
+      
+      # ============================================
+      # LLM 设置
+      # ============================================
       - LLM_USE_OPENAI=${LLM_USE_OPENAI:-true}
       - LLM_OPENAI_API_KEY=${LLM_OPENAI_API_KEY:-}
       - LLM_OPENAI_MODEL=${LLM_OPENAI_MODEL:-gpt-4o}
@@ -19,24 +26,76 @@ services:
       # Ollama base URL - use host.docker.internal for Docker on Mac/Windows
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
-      - LLM_TOP_P=${LLM_TOP_P:-0.6}
+      - LLM_NUM_THREAD=${LLM_NUM_THREAD:-12}
+      # Ollama specific parameters
       - LLM_NUM_CTX=${LLM_NUM_CTX:-8192}
       - LLM_NUM_PREDICT=${LLM_NUM_PREDICT:-2048}
-      - LLM_NUM_THREAD=${LLM_NUM_THREAD:-12}
+      
+      # ============================================
+      # Embedding 设置
+      # ============================================
       - EMBEDDING_MODEL=${EMBEDDING_MODEL:-BAAI/bge-base-zh-v1.5}
+      
+      # ============================================
+      # Chunking 设置
+      # ============================================
       - CHUNK_SIZE=${CHUNK_SIZE:-600}
       - CHUNK_OVERLAP=${CHUNK_OVERLAP:-150}
+      
+      # ============================================
+      # 检索流水线 - Query Expansion
+      # ============================================
+      - QUERY_EXPANSION_ENABLED=${QUERY_EXPANSION_ENABLED:-true}
+      - QUERY_EXPANSION_N_SUBQUERIES=${QUERY_EXPANSION_N_SUBQUERIES:-3}
+      - QUERY_EXPANSION_MODEL=${QUERY_EXPANSION_MODEL:-gpt-4o-mini}
+      - QUERY_EXPANSION_TEMPERATURE=${QUERY_EXPANSION_TEMPERATURE:-0.7}
+      - QUERY_EXPANSION_INCLUDE_ORIGINAL=${QUERY_EXPANSION_INCLUDE_ORIGINAL:-true}
+      
+      # ============================================
+      # 检索流水线 - Hybrid Retrieval
+      # ============================================
+      - HYBRID_TOP_K_PER_QUERY=${HYBRID_TOP_K_PER_QUERY:-20}
+      
+      # ============================================
+      # 检索流水线 - RRF Fusion
+      # ============================================
+      - RRF_K=${RRF_K:-60}
+      - RRF_TOP_K=${RRF_TOP_K:-15}
+      
+      # ============================================
+      # 检索流水线 - Reranking
+      # ============================================
+      - RERANKING_ENABLED=${RERANKING_ENABLED:-true}
+      - RERANKING_MODEL=${RERANKING_MODEL:-cross-encoder/ms-marco-MiniLM-L-6-v2}
+      - RERANKING_TOP_K=${RERANKING_TOP_K:-10}
+      - RERANKING_BATCH_SIZE=${RERANKING_BATCH_SIZE:-32}
+      
+      # ============================================
+      # 检索流水线 - MMR Post-processing
+      # ============================================
+      - MMR_MODE=${MMR_MODE:-auto}
+      - MMR_SIMILARITY_THRESHOLD=${MMR_SIMILARITY_THRESHOLD:-0.85}
+      - MMR_LAMBDA=${MMR_LAMBDA:-0.5}
+      - MMR_FINAL_K=${MMR_FINAL_K:-5}
+      
+      # ============================================
+      # 全局检索设置
+      # ============================================
       - SEARCH_K=${SEARCH_K:-8}
-      - SIMILARITY_WEIGHT=${SIMILARITY_WEIGHT:-0.6}
-      - MMR_WEIGHT=${MMR_WEIGHT:-0.4}
-      - MMR_LAMBDA=${MMR_LAMBDA:-0.7}
-      # HuggingFace cache directory for embedding models
+      
+      # ============================================
+      # 时间监控
+      # ============================================
+      - TIMING_ENABLED=${TIMING_ENABLED:-true}
+      - TIMING_SHOW_IN_TERMINAL=${TIMING_SHOW_IN_TERMINAL:-true}
+      
+      # ============================================
+      # HuggingFace 缓存目录
+      # ============================================
       - HF_HOME=/app/models_cache
-      - TRANSFORMERS_CACHE=/app/models_cache
+      
     volumes:
-      # Persist vector database
-      - vectordb_data:/app/data/vectordb
-      # Persist/cache embedding models (optional: mount local cache)
+      # Cache embedding and reranking models
       - models_cache:/app/models_cache
     networks:
       - ragenius-network
@@ -63,8 +122,5 @@ networks:
     driver: bridge
 
 volumes:
-  vectordb_data:
-    driver: local
   models_cache:
     driver: local
-

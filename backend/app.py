@@ -11,16 +11,14 @@ from dotenv import load_dotenv
 # 加载环境变量
 load_dotenv()
 
+# 初始化日志配置（必须在其他模块导入之前）
+from config import setup_logging
+setup_logging()
+
 from container import container
 from routes.documents import create_documents_blueprint
 from routes.query import create_query_blueprint  
 from routes.system import create_system_blueprint
-
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 
 logger = logging.getLogger(__name__)
 
@@ -66,13 +64,17 @@ def main():
     try:
         app = create_app()
         
+        # 根据环境变量决定是否启用 debug 模式
+        flask_env = os.getenv("FLASK_ENV", "development")
+        is_debug = flask_env == "development"
+        
         # 启动应用
-        logger.info("Starting Flask application...")
+        logger.info(f"Starting Flask application (env: {flask_env}, debug: {is_debug})...")
         app.run(
             host='0.0.0.0',
             port=8000,
-            debug=True,
-            use_reloader=True
+            debug=is_debug,
+            use_reloader=is_debug
         )
         
     except Exception as e:

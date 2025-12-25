@@ -1,3 +1,23 @@
+# =============================================================================
+# Query Expansion Prompt (查询扩展)
+# =============================================================================
+
+QUERY_EXPANSION_PROMPT_TEMPLATE = """You are a professional information retrieval expert. Rewrite the user query into {n} different queries from various perspectives.
+
+Original query: {query}
+
+Requirements:
+1. Each query should express the same core meaning from a different angle
+2. Use synonyms and paraphrases where appropriate
+3. **CRITICAL: All generated queries MUST be in the SAME LANGUAGE as the original query**
+
+Output exactly {n} queries, one per line, without numbering:"""
+
+
+# =============================================================================
+# QA Prompts (问答)
+# =============================================================================
+
 FINANCE_QA_PROMPT_TEMPLATE = """  
 你是一位专业的金融专家顾问，拥有丰富的理论基础和经验，了解金融领域的各种知识。   
 基于以下丰富的已知信息，专业而有条理地回答问题。
@@ -35,6 +55,33 @@ GENERAL_QA_PROMPT_TEMPLATE = """
 - 如果信息不足，诚实说明
 
 现在请严格按照上述要求回答问题。
+"""
+
+# 低置信度时的提示模板（检索到的文档相关度较低）
+GENERAL_QA_PROMPT_TEMPLATE_LOW_CONFIDENCE = """  
+你是一个严格的文档问答助手。
+
+**注意**：系统检索到的以下内容与用户问题的相关度较低，可能无法完全回答问题。
+
+**检索到的内容**（仅供参考，相关度较低）：
+{context}
+
+{chat_history}
+
+**用户问题**：
+{question}
+
+**严格要求**：
+1. 如果上述内容无法回答问题，请直接说明："根据提供的文档，无法找到与该问题直接相关的信息。"
+2. 如果内容部分相关，可以尝试回答，但必须说明信息可能不完整。
+3. 绝对不能使用文档外的知识来补充回答。
+
+**回答格式**：
+- 使用简体中文
+- 直接回答，无需重复问题
+- 如果无法回答，诚实说明
+
+现在请根据实际情况回答问题。
 """
 
 # 无文档时的提示模板

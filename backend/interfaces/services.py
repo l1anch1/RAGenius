@@ -3,7 +3,7 @@ Service Interfaces
 定义服务层的抽象接口
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any
 
 
 class DocumentServiceInterface(ABC):

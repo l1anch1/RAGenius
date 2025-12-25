@@ -3,9 +3,6 @@ Vector Store Manager
 向量存储管理器实现
 """
 import os
-import io
-import shutil
-import stat
 import time
 import threading
 from typing import Optional, Dict, Any, List
@@ -18,7 +15,7 @@ from langchain_core.documents import Document as LangChainDocument
 
 from interfaces.vector_store import VectorStoreInterface, EmbeddingInterface
 from managers.cache_manager import CacheManager
-from config import VECTOR_DB_DIR, CHUNK_SIZE, CHUNK_OVERLAP
+from config import CHUNK_SIZE, CHUNK_OVERLAP
 
 logger = logging.getLogger(__name__)
 
@@ -120,73 +117,13 @@ class ChromaVectorStoreManager(VectorStoreInterface):
             重建是否成功
         """
         logger.warning("rebuild_store is deprecated. Use rebuild_store_from_memory instead.")
-        with self._lock:
-            try:
-                logger.info("Starting vector store rebuild (memory mode)...")
+        
+        documents = self._load_documents(documents_dir)
+        if not documents:
+            logger.warning("No documents found to process")
+            return False
                 
-                # 1. 清除旧的内存存储
-                self._vector_store = None
-                self._vectorized_documents = []
-                self._total_chunks = 0
-                
-                # 2. 加载文档
-                logger.info(f"Loading documents from directory: {documents_dir}")
-                documents = self._load_documents(documents_dir)
-                if not documents:
-                    logger.warning("No documents found to process")
-                    return False
-                
-                logger.info(f"Successfully loaded {len(documents)} documents")
-                
-                # 3. 处理文档为chunks
-                logger.info("Processing documents into chunks...")
-                chunks = self._process_documents(documents)
-                if not chunks:
-                    logger.warning("No chunks generated from documents")
-                    return False
-                
-                logger.info(f"Generated {len(chunks)} chunks from {len(documents)} documents")
-                
-                # 4. 获取嵌入模型
-                logger.info("Creating new in-memory vector store...")
-                embedding_model = self.embedding_interface.get_embeddings()
-                if not embedding_model:
-                    logger.error("Embedding model not available")
-                    return False
-                
-                # 5. 创建内存向量存储（不持久化）
-                self._vector_store = Chroma.from_documents(
-                    documents=chunks,
-                    embedding=embedding_model,
-                    collection_name="documents"
-                    # 不设置persist_directory，使用内存存储
-                )
-                
-                # 6. 记录向量化的文档信息
-                document_set = set()
-                for chunk in chunks:
-                    if hasattr(chunk, 'metadata') and 'source' in chunk.metadata:
-                        source = chunk.metadata['source']
-                        filename = os.path.basename(source)
-                        if filename:
-                            document_set.add(filename)
-                
-                self._vectorized_documents = sorted(list(document_set))
-                self._total_chunks = len(chunks)
-                import time
-                self._last_build_time = time.time()
-                
-                logger.info(f"Successfully created in-memory vector store with:")
-                logger.info(f"  - {self._total_chunks} chunks")
-                logger.info(f"  - {len(self._vectorized_documents)} documents: {self._vectorized_documents}")
-                
-                return True
-                
-            except Exception as e:
-                logger.error(f"Failed to rebuild vector store: {e}")
-                import traceback
-                traceback.print_exc()
-                return False
+        return self._build_vector_store_from_documents(documents)
     
     def rebuild_store_from_memory(self, in_memory_documents: Dict[str, bytes]) -> bool:
         """
@@ -198,53 +135,61 @@ class ChromaVectorStoreManager(VectorStoreInterface):
         Returns:
             重建是否成功
         """
+        if not in_memory_documents:
+            logger.warning("No documents in memory to process")
+            return False
+        
+        logger.info(f"Loading {len(in_memory_documents)} documents from memory")
+        documents = self._load_documents_from_memory(in_memory_documents)
+        if not documents:
+            logger.warning("No documents loaded from memory")
+            return False
+        
+        return self._build_vector_store_from_documents(documents)
+    
+    def _build_vector_store_from_documents(self, documents: List[Any]) -> bool:
+        """
+        从文档列表构建向量存储（公共方法，消除代码重复）
+        
+        Args:
+            documents: 已加载的文档列表
+        
+        Returns:
+            构建是否成功
+        """
         with self._lock:
             try:
-                logger.info("Starting vector store rebuild from memory...")
+                logger.info("Starting vector store build...")
                 
                 # 1. 清除旧的内存存储
                 self._vector_store = None
                 self._vectorized_documents = []
                 self._total_chunks = 0
                 
-                if not in_memory_documents:
-                    logger.warning("No documents in memory to process")
-                    return False
+                logger.info(f"Processing {len(documents)} documents")
                 
-                # 2. 从内存文档加载
-                logger.info(f"Loading {len(in_memory_documents)} documents from memory")
-                documents = self._load_documents_from_memory(in_memory_documents)
-                if not documents:
-                    logger.warning("No documents loaded from memory")
-                    return False
-                
-                logger.info(f"Successfully loaded {len(documents)} documents from memory")
-                
-                # 3. 处理文档为chunks
-                logger.info("Processing documents into chunks...")
+                # 2. 处理文档为 chunks
                 chunks = self._process_documents(documents)
                 if not chunks:
                     logger.warning("No chunks generated from documents")
                     return False
                 
-                logger.info(f"Generated {len(chunks)} chunks from {len(documents)} documents")
+                logger.info(f"Generated {len(chunks)} chunks")
                 
-                # 4. 获取嵌入模型
-                logger.info("Creating new in-memory vector store...")
+                # 3. 获取嵌入模型
                 embedding_model = self.embedding_interface.get_embeddings()
                 if not embedding_model:
                     logger.error("Embedding model not available")
                     return False
                 
-                # 5. 创建内存向量存储（不持久化）
+                # 4. 创建内存向量存储
                 self._vector_store = Chroma.from_documents(
                     documents=chunks,
                     embedding=embedding_model,
                     collection_name="documents"
-                    # 不设置persist_directory，使用内存存储
                 )
                 
-                # 6. 记录向量化的文档信息
+                # 5. 记录向量化的文档信息
                 document_set = set()
                 for chunk in chunks:
                     if hasattr(chunk, 'metadata') and 'source' in chunk.metadata:
@@ -257,14 +202,12 @@ class ChromaVectorStoreManager(VectorStoreInterface):
                 self._total_chunks = len(chunks)
                 self._last_build_time = time.time()
                 
-                logger.info(f"Successfully created in-memory vector store with:")
-                logger.info(f"  - {self._total_chunks} chunks")
-                logger.info(f"  - {len(self._vectorized_documents)} documents: {self._vectorized_documents}")
+                logger.info(f"Vector store built: {self._total_chunks} chunks, {len(self._vectorized_documents)} documents")
                 
                 return True
                 
             except Exception as e:
-                logger.error(f"Failed to rebuild vector store from memory: {e}")
+                logger.error(f"Failed to build vector store: {e}")
                 import traceback
                 traceback.print_exc()
                 return False
@@ -324,16 +267,10 @@ class ChromaVectorStoreManager(VectorStoreInterface):
                 "total_chunks": self._total_chunks
             }
     
-
-    
     def is_available(self) -> bool:
         """检查向量存储是否可用"""
         with self._lock:
             return self._vector_store is not None
-    
-
-    
-
     
     def _load_documents(self, documents_dir: str) -> List[Any]:
         """加载文档"""

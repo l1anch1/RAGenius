@@ -1,0 +1,57 @@
+"""
+Configuration Package
+配置包 - 统一导出配置、日志和提示词
+"""
+from .config import *
+from .logging_config import setup_logging
+from .prompts import *
+
+__all__ = [
+    # 从 config.py 导出所有配置
+    "DEVICE",
+    "LLM_USE_OPENAI",
+    "LLM_OPENAI_API_KEY",
+    "LLM_OPENAI_MODEL",
+    "LLM_OPENAI_API_BASE",
+    "LLM_LOCAL_MODEL",
+    "OLLAMA_BASE_URL",
+    "LLM_TEMPERATURE",
+    "LLM_NUM_THREAD",
+    "LLM_NUM_CTX",
+    "LLM_NUM_PREDICT",
+    "EMBEDDING_MODEL",
+    "CHUNK_SIZE",
+    "CHUNK_OVERLAP",
+    "QUERY_EXPANSION_ENABLED",
+    "QUERY_EXPANSION_N_SUBQUERIES",
+    "QUERY_EXPANSION_MODEL",
+    "QUERY_EXPANSION_TEMPERATURE",
+    "QUERY_EXPANSION_INCLUDE_ORIGINAL",
+    "HYBRID_TOP_K_PER_QUERY",
+    "RRF_K",
+    "RRF_TOP_K",
+    "RERANKING_ENABLED",
+    "RERANKING_MODEL",
+    "RERANKING_TOP_K",
+    "RERANKING_BATCH_SIZE",
+    "SCORE_TRUNCATION_ENABLED",
+    "SCORE_GAP_THRESHOLD",
+    "SCORE_MIN_THRESHOLD",
+    "MMR_MODE",
+    "MMR_SIMILARITY_THRESHOLD",
+    "MMR_LAMBDA",
+    "MMR_FINAL_K",
+    "SEARCH_K",
+    "TIMING_ENABLED",
+    "TIMING_SHOW_IN_TERMINAL",
+    "TIMING_MIN_DURATION_MS",
+    # 从 logging_config.py 导出
+    "setup_logging",
+    # 从 prompts.py 导出
+    "QUERY_EXPANSION_PROMPT_TEMPLATE",
+    "FINANCE_QA_PROMPT_TEMPLATE",
+    "GENERAL_QA_PROMPT_TEMPLATE",
+    "GENERAL_QA_PROMPT_TEMPLATE_LOW_CONFIDENCE",
+    "GENERAL_QA_PROMPT_TEMPLATE_NO_DOCS",
+]
+

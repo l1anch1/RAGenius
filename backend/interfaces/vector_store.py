@@ -3,7 +3,7 @@ Vector Store Interface
 定义向量存储的抽象接口
 """
 from abc import ABC, abstractmethod
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict, Any
 
 
 class VectorStoreInterface(ABC):
@@ -32,8 +32,6 @@ class VectorStoreInterface(ABC):
     def get_vectorized_documents(self) -> Dict[str, Any]:
         """获取已向量化的文档列表"""
         pass
-    
-
     
     @abstractmethod
     def is_available(self) -> bool:
