@@ -4,19 +4,30 @@ This directory contains automated workflows for the RAGenius project.
 
 ## Workflows
 
-### 1. CI (`ci.yml`)
+### 1. CI (`ci.yml`) - **Required Checks**
 **Trigger**: Push to `main`/`develop` branches, Pull Requests
 
-**Jobs**:
-- **Backend Tests**: Python syntax check, linting (flake8), formatting (black), import checks
-- **Frontend Tests**: ESLint, build verification
+**Jobs** (Must Pass):
+- **Backend Tests**: Python syntax check and import validation
+- **Frontend Tests**: Build verification
 - **Docker Build**: Multi-stage build verification for both backend and frontend
-- **Security Scan**: Trivy vulnerability scanning
-- **Code Quality**: SonarCloud analysis (optional)
+- **Security Scan**: Trivy vulnerability scanning (non-blocking)
+- **Code Quality**: SonarCloud analysis (optional, non-blocking)
 
 **Matrix Strategy**:
 - Python: 3.9, 3.10, 3.11
 - Node.js: 18.x, 20.x
+
+**Philosophy**: Focus on critical checks (syntax, builds). Non-critical issues won't block merges.
+
+### 1.5. Code Quality (`code-quality.yml`) - **Optional Checks**
+**Trigger**: Pull Requests only
+
+**Jobs** (Informational Only):
+- **Python Quality**: Black formatting, Flake8 linting, Pylint analysis
+- **JavaScript Quality**: ESLint checks
+
+**Philosophy**: Provide feedback without blocking. All checks use `continue-on-error: true`.
 
 ### 2. Docker Publish (`docker-publish.yml`)
 **Trigger**: Version tags (`v*.*.*`), Releases, Manual dispatch
