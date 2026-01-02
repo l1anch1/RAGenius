@@ -95,7 +95,14 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Validate docker-compose.yml
+    - name: Create dummy .env for validation
+      run: |
+        echo "# Dummy .env for CI validation" > .env
+        echo "DEVICE=cpu" >> .env
+        echo "LLM_USE_OPENAI=true" >> .env
+        echo "LLM_OPENAI_API_KEY=dummy" >> .env
+
+    - name: Validate docker-compose.yml syntax
       run: |
         echo "🔍 Validating docker-compose.yml syntax..."
         docker-compose config > /dev/null
