@@ -1,13 +1,10 @@
 # Git
 .git
 .gitignore
+.gitattributes
 
-# IDE
-.idea
-.vscode
-*.swp
-*.swo
-*~
+# CI/CD
+.github
 
 # Python
 __pycache__
@@ -15,53 +12,77 @@ __pycache__
 *$py.class
 *.so
 .Python
-env/
-venv/
-.venv/
-ENV/
-.eggs/
-*.egg-info/
+*.egg-info
+dist
+build
 *.egg
-.mypy_cache/
-.pytest_cache/
+.pytest_cache
 .coverage
-htmlcov/
+htmlcov
+.tox
+.mypy_cache
+.dmypy.json
+dmypy.json
 
-# Node
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.bak
+
+# Models cache (will be generated in container)
+models_cache/
+backend/models_cache/
+
+# Data
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env.local
+.env.development
+.env.test
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Frontend
+frontend/
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Build outputs
-dist/
-build/
-*.log
-
-# Environment files (should be passed via docker-compose)
-.env
-.env.local
-.env.*.local
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Documentation
-*.md
-!README.md
-
-# Docker files (don't need to copy these into image)
-Dockerfile*
+# Docker
 docker-compose*.yml
-.dockerignore
+Dockerfile*
+!Dockerfile
 
-# Local data (mounted as volumes)
-data/
-models_cache/
+# Scripts
+scripts/
+*.sh
 
-# Temporary files
-*.tmp
-*.temp
-
-
+# Tests
+tests/
+test_*.py
+*_test.py

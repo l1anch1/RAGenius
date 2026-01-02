@@ -1,5 +1,9 @@
 # RAGenius: Advanced Knowledge Retrieval Platform
 
+[![CI](https://github.com/l1anch1/DeepSeek-RAG/actions/workflows/ci.yml/badge.svg)](https://github.com/l1anch1/DeepSeek-RAG/actions/workflows/ci.yml)
+[![Docker Publish](https://github.com/l1anch1/DeepSeek-RAG/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/l1anch1/DeepSeek-RAG/actions/workflows/docker-publish.yml)
+[![CodeQL](https://github.com/l1anch1/DeepSeek-RAG/actions/workflows/codeql.yml/badge.svg)](https://github.com/l1anch1/DeepSeek-RAG/actions/workflows/codeql.yml)
+
 A sophisticated QA system architected on Langchain's robust framework and powered by DeepSeek's local models and OpenAI API. Leveraging Retrieval Augmented Generation (RAG) methodology, this platform seamlessly integrates proprietary domain knowledge with generative AI capabilities, delivering high accuracy and contextual relevance in specialized information retrieval scenarios.
 <br>
 
@@ -115,6 +119,25 @@ See `backend/config/config.py` for all options.
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+# Development
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and deployment:
+
+- **CI Pipeline**: Automated testing, linting, and building on every push/PR
+- **Docker Publishing**: Multi-architecture images published to GitHub Container Registry
+- **Security Scanning**: CodeQL and dependency vulnerability checks
+- **Auto-updates**: Dependabot keeps dependencies current
+
+See [`.github/workflows/README.md`](.github/workflows/README.md) for detailed workflow documentation.
+
+## Code Quality Standards
+
+- **Python**: Black (formatting), Flake8 (linting), Pylint (static analysis)
+- **JavaScript**: ESLint with React hooks rules
+- **Docker**: Multi-stage builds with layer caching optimization
 
 # Contact
 

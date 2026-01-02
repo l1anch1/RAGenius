@@ -1,39 +1,72 @@
 # Python
-__pycache__/
+__pycache__
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
-venv/
-.venv/
-*.egg-info/
+*.egg-info
+dist
+build
 *.egg
-.mypy_cache/
-.pytest_cache/
+.pytest_cache
+.coverage
+htmlcov
+.tox
+.mypy_cache
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
 
 # IDE
-.idea/
-.vscode/
+.vscode
+.idea
 *.swp
 *.swo
-
-# Environment files
-.env
-.env.local
-
-# Data directories (mounted as volumes)
-data/
-models_cache/
-
-# Logs
-*.log
-
-# Docker
-Dockerfile
-.dockerignore
+*~
 
 # OS
 .DS_Store
+Thumbs.db
 
+# Models cache (will be generated in container)
+models_cache/
 
+# Data
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+.env.development
+.env.test
+
+# Git
+.git
+.gitignore
+
+# CI/CD
+.github
+
+# Documentation
+*.md
+!README.md
+
+# Tests
+tests/
+test_*.py
+*_test.py
+
+# Docker
+Dockerfile*
+!Dockerfile
+docker-compose*.yml

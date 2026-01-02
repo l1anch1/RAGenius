@@ -1,0 +1,52 @@
+[flake8]
+# Maximum line length
+max-line-length = 127
+
+# Maximum cyclomatic complexity
+max-complexity = 10
+
+# Exclude patterns
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    env,
+    build,
+    dist,
+    *.egg-info,
+    .tox,
+    .pytest_cache,
+    backend/models_cache,
+    models_cache,
+    frontend/node_modules,
+    frontend/dist,
+    data
+
+# Ignore specific errors
+ignore = 
+    E203,  # Whitespace before ':'
+    E266,  # Too many leading '#' for block comment
+    E501,  # Line too long (handled by max-line-length)
+    W503,  # Line break before binary operator
+    W504,  # Line break after binary operator
+    F401,  # Module imported but unused (for __init__.py)
+    F403,  # Unable to detect undefined names (for wildcard imports in config)
+
+# Per-file ignores
+per-file-ignores =
+    __init__.py:F401,F403
+    backend/config/__init__.py:F401,F403
+
+# Show source code for each error
+show-source = True
+
+# Show the relevant pep8 error code
+show-pep8 = True
+
+# Count the number of occurrences of each error/warning code
+count = True
+
+# Print total number of errors
+statistics = True
+
