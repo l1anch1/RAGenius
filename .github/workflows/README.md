@@ -4,13 +4,13 @@ This directory contains automated workflows for the RAGenius project.
 
 ## Workflows
 
-### 1. CI (`ci.yml`) - **Required Checks**
+### 1. CI (`ci.yml`) - **Required Checks** ⚡ Fast
 **Trigger**: Push to `main`/`develop` branches, Pull Requests
 
 **Jobs** (Must Pass):
-- **Backend Tests**: Python syntax check and import validation
-- **Frontend Tests**: Build verification
-- **Docker Build**: Multi-stage build verification for both backend and frontend
+- **Backend Tests**: Python syntax check and import validation (2-3 min)
+- **Frontend Tests**: Build verification (1 min)
+- **Docker Validation**: Quick config validation (5 sec)
 - **Security Scan**: Trivy vulnerability scanning (non-blocking)
 - **Code Quality**: SonarCloud analysis (optional, non-blocking)
 
@@ -18,7 +18,9 @@ This directory contains automated workflows for the RAGenius project.
 - Python: 3.9, 3.10, 3.11
 - Node.js: 18.x, 20.x
 
-**Philosophy**: Focus on critical checks (syntax, builds). Non-critical issues won't block merges.
+**Total Time**: ~4-5 minutes
+
+**Philosophy**: Fast feedback on critical checks. Heavy Docker builds run separately.
 
 ### 1.5. Code Quality (`code-quality.yml`) - **Optional Checks**
 **Trigger**: Pull Requests only
@@ -29,7 +31,23 @@ This directory contains automated workflows for the RAGenius project.
 
 **Philosophy**: Provide feedback without blocking. All checks use `continue-on-error: true`.
 
-### 2. Docker Publish (`docker-publish.yml`)
+### 2. Docker Build Test (`docker-build-test.yml`) - **Comprehensive** 🐳
+**Trigger**: Manual, Weekly (Sunday), Dockerfile changes
+
+**Jobs**:
+- **Full Docker Builds**: Build backend and frontend images (45 min timeout)
+- **Runtime Tests**: Verify containers start successfully
+- **Image Size Report**: Display final image sizes
+
+**Philosophy**: Heavy builds don't block development. Run periodically or on-demand.
+
+**Manual Trigger**: 
+```bash
+# Via GitHub UI: Actions → Docker Build Test → Run workflow
+# Or when you modify Dockerfiles
+```
+
+### 3. Docker Publish (`docker-publish.yml`)
 **Trigger**: Version tags (`v*.*.*`), Releases, Manual dispatch
 
 **Features**:

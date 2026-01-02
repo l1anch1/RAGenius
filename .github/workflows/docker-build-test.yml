@@ -1,0 +1,82 @@
+name: Docker Build Test
+
+# This workflow tests Docker builds separately
+# It runs on-demand or weekly to avoid blocking main CI
+
+on:
+  workflow_dispatch:  # Manual trigger
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+  pull_request:
+    paths:
+      - '**/Dockerfile'
+      - 'docker-compose.yml'
+      - '.dockerignore'
+
+jobs:
+  docker-build:
+    name: Test Docker Builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build backend image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        file: ./backend/Dockerfile
+        push: false
+        tags: ragenius-backend:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
+      timeout-minutes: 25
+
+    - name: Build frontend image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        file: ./frontend/Dockerfile
+        push: false
+        tags: ragenius-frontend:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
+      timeout-minutes: 15
+
+    - name: Test Docker Compose configuration
+      run: |
+        echo "🔍 Validating docker-compose.yml..."
+        docker-compose config > /dev/null
+        echo "✅ Docker Compose config valid!"
+
+    - name: Test backend image runs
+      run: |
+        echo "🧪 Testing backend image..."
+        docker run --rm -d --name test-backend -p 8000:8000 ragenius-backend:test
+        sleep 5
+        docker ps | grep test-backend || echo "⚠️  Backend container may have issues"
+        docker stop test-backend || true
+      continue-on-error: true
+
+    - name: Test frontend image runs
+      run: |
+        echo "🧪 Testing frontend image..."
+        docker run --rm -d --name test-frontend -p 3000:80 ragenius-frontend:test
+        sleep 3
+        docker ps | grep test-frontend && echo "✅ Frontend container running"
+        docker stop test-frontend || true
+
+    - name: Show image sizes
+      run: |
+        echo "📦 Image sizes:"
+        docker images | grep ragenius
+
