@@ -55,7 +55,7 @@ jobs:
     - name: Test Docker Compose configuration
       run: |
         echo "🔍 Validating docker-compose.yml..."
-        docker-compose config > /dev/null
+        docker compose config > /dev/null
         echo "✅ Docker Compose config valid!"
 
     - name: Test backend image runs

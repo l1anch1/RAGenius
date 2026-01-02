@@ -105,7 +105,7 @@ jobs:
     - name: Validate docker-compose.yml syntax
       run: |
         echo "🔍 Validating docker-compose.yml syntax..."
-        docker-compose config > /dev/null
+        docker compose config > /dev/null
         echo "✅ Docker Compose config valid!"
 
     - name: Check Dockerfiles exist
