@@ -210,6 +210,71 @@ class DocumentService(DocumentServiceInterface):
                 "message": f"Failed to get document preview: {str(e)}"
             }
     
+    def delete_document(self, filename: str) -> Dict[str, Any]:
+        """删除单个文档
+        
+        Args:
+            filename: 要删除的文件名
+        
+        Returns:
+            删除结果
+        """
+        try:
+            with self._lock:
+                if filename not in self._in_memory_documents:
+                    return {
+                        "status": "error",
+                        "message": f"Document '{filename}' not found"
+                    }
+                
+                # 从内存中删除
+                del self._in_memory_documents[filename]
+                logger.info(f"Document deleted from memory: {filename}")
+                logger.info(f"Remaining documents: {len(self._in_memory_documents)}")
+                
+                return {
+                    "status": "success",
+                    "message": f"Document '{filename}' deleted successfully",
+                    "remaining_count": len(self._in_memory_documents)
+                }
+                
+        except Exception as e:
+            logger.error(f"Failed to delete document: {e}")
+            return {
+                "status": "error",
+                "message": f"Failed to delete document: {str(e)}"
+            }
+    
+    def clear_all_documents(self) -> Dict[str, Any]:
+        """清空所有文档（包括内存和向量数据库）
+        
+        Returns:
+            清空结果
+        """
+        try:
+            with self._lock:
+                # 清空内存中的文档
+                doc_count = len(self._in_memory_documents)
+                self._in_memory_documents.clear()
+                logger.info(f"Cleared {doc_count} documents from memory")
+                
+                # 清空向量数据库
+                self.vector_store_manager.clear_store()
+                logger.info("Vector store cleared")
+                
+                return {
+                    "status": "success",
+                    "message": f"Successfully cleared {doc_count} documents and knowledge base",
+                    "cleared_count": doc_count
+                }
+                
+        except Exception as e:
+            logger.error(f"Failed to clear documents: {e}")
+            return {
+                "status": "error",
+                "message": f"Failed to clear documents: {str(e)}"
+            }
+    
     def rebuild_knowledge_base(self) -> Dict[str, Any]:
         """重建知识库（从内存中的文档）"""
         try:

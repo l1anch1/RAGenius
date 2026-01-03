@@ -32,6 +32,20 @@ class DocumentServiceInterface(ABC):
     def rebuild_knowledge_base(self) -> Dict[str, Any]:
         """重建知识库"""
         pass
+    
+    @abstractmethod
+    def delete_document(self, filename: str) -> Dict[str, Any]:
+        """删除单个文档
+        
+        Args:
+            filename: 要删除的文件名
+        """
+        pass
+    
+    @abstractmethod
+    def clear_all_documents(self) -> Dict[str, Any]:
+        """清空所有文档"""
+        pass
 
 
 class QueryServiceInterface(ABC):

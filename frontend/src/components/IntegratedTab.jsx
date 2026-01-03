@@ -206,6 +206,66 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 		}
 	};
 
+	// 删除单个文档
+	const deleteDocument = async (filename) => {
+		if (!confirm(`确定要删除 "${filename}" 吗？`)) {
+			return;
+		}
+
+		try {
+			const response = await fetch('/api/documents/delete', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ filename }),
+			});
+			const data = await response.json();
+
+			if (data.status === 'success') {
+				setSuccessMessage(data.message);
+				setMessageSource('upload');
+				fetchDocuments(); // 刷新文档列表
+			} else {
+				setErrorMessage(data.message);
+				setMessageSource('upload');
+			}
+		} catch (error) {
+			console.error('Failed to delete document:', error);
+			setErrorMessage('删除文件失败，请检查网络连接。');
+			setMessageSource('upload');
+		}
+	};
+
+	// 清空所有文档
+	const clearAllDocuments = async () => {
+		if (!confirm('确定要清空所有文档吗？这将删除所有上传的文件和知识库数据！')) {
+			return;
+		}
+
+		try {
+			const response = await fetch('/api/documents/clear', {
+				method: 'POST',
+			});
+			const data = await response.json();
+
+			if (data.status === 'success') {
+				setSuccessMessage(data.message);
+				setMessageSource('upload');
+				fetchDocuments();
+				fetchVectorizedDocuments();
+				refreshSystemInfo();
+			} else {
+				setErrorMessage(data.message);
+				setMessageSource('upload');
+			}
+		} catch (error) {
+			console.error('Failed to clear documents:', error);
+			setErrorMessage('清空文档失败，请检查网络连接。');
+			setMessageSource('upload');
+		}
+	};
+
 	// 重建知识库
 	const rebuildKnowledgeBase = async () => {
 		setIsRebuilding(true);
@@ -831,7 +891,7 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 					</div>
 
 					{/* 上传文件按钮 */}
-					<div className="mb-4">
+					<div className="mb-4 space-y-2">
 						<input
 							type="file"
 							ref={fileInputRef}
@@ -860,6 +920,18 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 								</>
 							)}
 						</button>
+						{/* 清空所有文档按钮 */}
+						{documents.length > 0 && (
+							<button
+								onClick={clearAllDocuments}
+								className="w-full px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-medium rounded-lg transition-colors flex items-center justify-center space-x-2"
+							>
+								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+								</svg>
+								<span>清空所有文档</span>
+							</button>
+						)}
 					</div>
 
 					{/* 消息提示 - 只显示重建知识库的消息 */}
@@ -880,12 +952,14 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 								return (
 									<div 
 										key={doc} 
-										className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 gap-3 cursor-pointer transition-colors relative"
-										onMouseEnter={(e) => handleMouseEnter(doc, e)}
-										onMouseMove={handleMouseMove}
-										onMouseLeave={handleMouseLeave}
+										className="group flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 gap-3 transition-colors relative"
 									>
-										<div className="flex items-center space-x-3 flex-1 min-w-0">
+										<div 
+											className="flex items-center space-x-3 flex-1 min-w-0 cursor-pointer"
+											onMouseEnter={(e) => handleMouseEnter(doc, e)}
+											onMouseMove={handleMouseMove}
+											onMouseLeave={handleMouseLeave}
+										>
 											<div className="text-lg flex-shrink-0">
 												{doc.endsWith('.pdf') ? '📕' : 
 												 doc.endsWith('.txt') ? '📄' : 
@@ -897,7 +971,22 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 												<p className="text-sm font-medium text-gray-900 truncate">{doc}</p>
 											</div>
 										</div>
-										<div className={`w-2 h-2 rounded-full flex-shrink-0 ${isVectorized ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+										<div className="flex items-center space-x-2 flex-shrink-0">
+											<div className={`w-2 h-2 rounded-full ${isVectorized ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+											{/* 删除按钮 - 鼠标悬停时显示 */}
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													deleteDocument(doc);
+												}}
+												className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
+												title="删除文档"
+											>
+												<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+												</svg>
+											</button>
+										</div>
 									</div>
 								);
 							})

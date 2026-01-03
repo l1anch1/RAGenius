@@ -35,6 +35,39 @@ def create_documents_blueprint(document_service: DocumentService) -> Blueprint:
             logger.error(f"Error in get_vectorized_documents: {e}")
             return jsonify({"status": "error", "message": str(e)}), 500
     
+    @documents_bp.route("/api/documents/delete", methods=["POST"])
+    def delete_document():
+        """删除单个文档"""
+        try:
+            data = request.get_json()
+            if not data or 'filename' not in data:
+                return jsonify({"status": "error", "message": "Filename is required"}), 400
+            
+            filename = data['filename']
+            result = document_service.delete_document(filename)
+            
+            if result['status'] == 'error':
+                return jsonify(result), 404 if 'not found' in result['message'].lower() else 500
+            
+            return jsonify(result)
+        except Exception as e:
+            logger.error(f"Error in delete_document: {e}")
+            return jsonify({"status": "error", "message": str(e)}), 500
+    
+    @documents_bp.route("/api/documents/clear", methods=["POST"])
+    def clear_all_documents():
+        """清空所有文档"""
+        try:
+            result = document_service.clear_all_documents()
+            
+            if result['status'] == 'error':
+                return jsonify(result), 500
+            
+            return jsonify(result)
+        except Exception as e:
+            logger.error(f"Error in clear_all_documents: {e}")
+            return jsonify({"status": "error", "message": str(e)}), 500
+    
     @documents_bp.route("/api/documents/upload", methods=["POST"])
     def upload_document():
         """上传文档"""

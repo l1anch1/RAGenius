@@ -37,6 +37,11 @@ class VectorStoreInterface(ABC):
     def is_available(self) -> bool:
         """检查向量存储是否可用"""
         pass
+    
+    @abstractmethod
+    def clear_store(self) -> bool:
+        """清空向量存储"""
+        pass
 
 
 class EmbeddingInterface(ABC):

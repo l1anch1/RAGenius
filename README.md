@@ -70,7 +70,7 @@ git clone https://github.com/l1anch1/DeepSeek-RAG.git
 cd RAGenius
 
 # 2. Install Python dependencies
-pip install -r backend/requirements.txt
+pip install -r backend/requirements.txt 
 
 # 3. Install frontend dependencies
 cd frontend && npm install && cd ..

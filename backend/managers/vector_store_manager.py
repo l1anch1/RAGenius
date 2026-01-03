@@ -106,6 +106,31 @@ class ChromaVectorStoreManager(VectorStoreInterface):
         with self._lock:
             return self._vector_store
     
+    def clear_store(self) -> bool:
+        """清空向量存储和所有元数据
+        
+        Returns:
+            清空是否成功
+        """
+        try:
+            with self._lock:
+                logger.info("Clearing vector store and metadata...")
+                
+                # 清空向量存储
+                self._vector_store = None
+                
+                # 清空元数据
+                self._vectorized_documents = []
+                self._total_chunks = 0
+                self._last_build_time = None
+                
+                logger.info("Vector store and metadata cleared successfully")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Failed to clear vector store: {e}")
+            return False
+    
     def rebuild_store(self, documents_dir: str) -> bool:
         """
         重建向量存储 - 从文件系统（已废弃，保留用于接口兼容性）
