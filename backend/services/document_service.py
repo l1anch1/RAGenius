@@ -276,7 +276,10 @@ class DocumentService(DocumentServiceInterface):
             }
     
     def rebuild_knowledge_base(self) -> Dict[str, Any]:
-        """重建知识库（从内存中的文档）"""
+        """重建知识库（从内存中的文档）
+        
+        如果内存中没有文档，则清空向量库
+        """
         try:
             logger.info("Starting knowledge base rebuild from memory...")
             
@@ -285,11 +288,13 @@ class DocumentService(DocumentServiceInterface):
             
             logger.info(f"Found {len(in_memory_docs)} documents in memory: {list(in_memory_docs.keys())}")
             
+            # 如果没有文档，清空向量库
             if not in_memory_docs:
-                logger.warning("No documents in memory to rebuild")
+                logger.info("No documents in memory, clearing vector store")
+                self.vector_store_manager.clear_store()
                 return {
-                    "status": "error",
-                    "message": "No documents in memory to rebuild. Please upload documents first."
+                    "status": "success",
+                    "message": "Knowledge base cleared (no documents to rebuild)"
                 }
             
             # 使用内存文档重建向量存储
