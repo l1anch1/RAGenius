@@ -94,9 +94,17 @@ services:
       # ============================================
       - HF_HOME=/app/models_cache
       
+      # ============================================
+      # ChromaDB 持久化设置
+      # ============================================
+      # 留空使用纯内存模式，设置路径则启用持久化
+      - CHROMA_PERSIST_DIR=${CHROMA_PERSIST_DIR:-/app/chroma_data}
+      
     volumes:
       # Cache embedding and reranking models
       - models_cache:/app/models_cache
+      # Persist vector database (comment out for in-memory mode)
+      - chroma_data:/app/chroma_data
     networks:
       - ragenius-network
     # For connecting to Ollama on host machine (if using local models)
@@ -123,4 +131,6 @@ networks:
 
 volumes:
   models_cache:
+    driver: local
+  chroma_data:
     driver: local

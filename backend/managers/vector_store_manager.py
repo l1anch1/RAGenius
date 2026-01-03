@@ -182,12 +182,32 @@ class ChromaVectorStoreManager(VectorStoreInterface):
                     logger.error("Embedding model not available")
                     return False
                 
-                # 4. 创建内存向量存储
-                self._vector_store = Chroma.from_documents(
-                    documents=chunks,
-                    embedding=embedding_model,
-                    collection_name="documents"
-                )
+                # 4. 创建向量存储（支持持久化）
+                # 从环境变量读取持久化配置
+                persist_dir = os.getenv("CHROMA_PERSIST_DIR", "")
+                
+                if persist_dir:
+                    # 持久化模式
+                    logger.info(f"Using persistent mode with directory: {persist_dir}")
+                    os.makedirs(persist_dir, exist_ok=True)
+                    self._vector_store = Chroma.from_documents(
+                        documents=chunks,
+                        embedding=embedding_model,
+                        collection_name="documents",
+                        persist_directory=persist_dir
+                    )
+                else:
+                    # 纯内存模式（使用 EphemeralClient）
+                    logger.info("Using ephemeral (in-memory) mode")
+                    import chromadb
+                    ephemeral_client = chromadb.EphemeralClient()
+                    self._vector_store = Chroma(
+                        client=ephemeral_client,
+                        embedding_function=embedding_model,
+                        collection_name="documents"
+                    )
+                    # 手动添加文档
+                    self._vector_store.add_documents(documents=chunks)
                 
                 # 5. 记录向量化的文档信息
                 document_set = set()

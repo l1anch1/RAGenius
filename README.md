@@ -15,7 +15,8 @@ A sophisticated QA system architected on Langchain's robust framework and powere
 - **Source Transparency**: All answers include references to source documents
 - **Streaming Generation**: Real-time token-by-token response display
 - **Multi-Format Support**: PDF, TXT, MD, CSV, DOCX, DOC
-- **Multi-Model Support**: Local DeepSeek models or OpenAI API 
+- **Multi-Model Support**: Local DeepSeek models or OpenAI API
+- **Flexible Persistence**: Configurable memory-only or persistent storage modes 
 
 # Installation
 
@@ -52,6 +53,11 @@ docker-compose up -d --build  # Rebuild
 1. Install Ollama and pull model: `ollama pull deepseek-r1:14b`
 2. Set in `.env`: `LLM_USE_OPENAI=false` and `LLM_LOCAL_MODEL=deepseek-r1:14b`
 
+**Data Persistence:**
+- **Persistent Mode** (default): Data survives container restarts
+- **In-Memory Mode**: Set `CHROMA_PERSIST_DIR=` in `.env` for ephemeral storage
+- See [PERSISTENCE_CONFIG.md](./PERSISTENCE_CONFIG.md) for details
+
 ---
 
 ## Option 2: Manual Installation
@@ -75,7 +81,7 @@ cd frontend && npm install && cd ..
 # 5. For local models (optional)
 # Install Ollama: https://ollama.com/
 # ollama pull deepseek-r1:14b
-```
+``` 
 
 
 # Usage
