@@ -1,0 +1,105 @@
+{
+  "test_cases": [
+    {
+      "question": "什么是 RAG（Retrieval Augmented Generation）？",
+      "ground_truth": "RAG 是一种结合信息检索和文本生成的技术。它首先从知识库中检索相关文档，然后将这些文档作为上下文输入到大语言模型中，生成更准确、更有依据的回答。RAG 的主要优势是能够访问外部知识，减少幻觉，提供可追溯的答案来源。",
+      "context_keywords": ["检索", "生成", "知识库", "上下文", "大语言模型"]
+    },
+    {
+      "question": "RAG 系统的主要组成部分有哪些？",
+      "ground_truth": "RAG 系统主要包含三个核心组成部分：1) 文档处理模块，负责文档加载、分块和向量化；2) 检索模块，使用向量数据库进行相似度搜索，找到与查询最相关的文档片段；3) 生成模块，将检索到的上下文和用户查询输入到 LLM 中生成回答。此外还包括嵌入模型、向量数据库等基础组件。",
+      "context_keywords": ["文档处理", "检索", "生成", "向量数据库", "嵌入模型"]
+    },
+    {
+      "question": "向量数据库在 RAG 中扮演什么角色？",
+      "ground_truth": "向量数据库在 RAG 中负责存储文档的向量表示（embeddings），并提供高效的相似度搜索功能。当用户提出查询时，系统会将查询转换为向量，然后在向量数据库中搜索最相似的文档向量，快速找到相关内容。常见的向量数据库包括 ChromaDB、Pinecone、Weaviate、Milvus 等。",
+      "context_keywords": ["向量存储", "embeddings", "相似度搜索", "ChromaDB"]
+    },
+    {
+      "question": "什么是 Embedding（嵌入）？",
+      "ground_truth": "Embedding 是将文本转换为固定维度的数值向量的过程。这些向量能够捕捉文本的语义信息，使得语义相似的文本在向量空间中距离较近。在 RAG 系统中，文档和查询都会被转换为 embeddings，通过计算向量相似度来找到最相关的文档。常用的嵌入模型包括 OpenAI embeddings、sentence-transformers 等。",
+      "context_keywords": ["向量", "语义", "相似度", "文本表示"]
+    },
+    {
+      "question": "RAG 中的文档分块（Chunking）为什么重要？",
+      "ground_truth": "文档分块是将长文档切分成较小片段的过程，这在 RAG 中非常重要，原因有：1) LLM 有上下文长度限制；2) 较小的块能提供更精确的检索结果；3) 有助于减少噪音，提高答案质量。分块时需要考虑块大小（chunk size）和重叠（overlap），以保证语义完整性。常见的分块大小在 200-1000 tokens 之间。",
+      "context_keywords": ["文档切分", "chunk size", "overlap", "上下文长度"]
+    },
+    {
+      "question": "什么是混合检索（Hybrid Retrieval）？",
+      "ground_truth": "混合检索结合了多种检索方法，通常是向量检索（semantic search）和关键词检索（如 BM25）。向量检索擅长捕捉语义相似度，而 BM25 擅长精确的关键词匹配。通过融合算法（如 RRF - Reciprocal Rank Fusion）整合两种方法的结果，可以获得更好的检索性能，既能理解语义又不会错过重要的关键词匹配。",
+      "context_keywords": ["向量检索", "BM25", "语义搜索", "关键词匹配", "RRF"]
+    },
+    {
+      "question": "Cross-Encoder 重排（Reranking）的作用是什么？",
+      "ground_truth": "Cross-Encoder 重排是在初步检索后对结果进行精细排序的过程。与 bi-encoder（用于初始检索）不同，cross-encoder 会同时处理查询和文档，计算更精确的相关性分数。虽然速度较慢，但准确度更高。在 RAG 流程中，通常先用快速的向量检索获得候选集，再用 cross-encoder 对候选进行重排，选出最相关的文档用于生成。",
+      "context_keywords": ["重排", "相关性评分", "bi-encoder", "精确匹配"]
+    },
+    {
+      "question": "RAG 系统如何减少大模型的幻觉（Hallucination）？",
+      "ground_truth": "RAG 通过以下方式减少幻觉：1) 提供真实的文档上下文，让模型基于事实回答而非臆造；2) 明确要求模型只根据提供的上下文回答；3) 提供答案来源，便于验证；4) 当上下文中没有相关信息时，引导模型承认不知道。此外，使用合适的 prompt engineering 和设置较低的 temperature 参数也有助于减少幻觉。",
+      "context_keywords": ["事实依据", "上下文", "答案来源", "prompt engineering"]
+    },
+    {
+      "question": "什么是查询扩展（Query Expansion）？",
+      "ground_truth": "查询扩展是将用户的原始查询改写或扩展为多个相关查询的技术。这可以通过：1) 使用 LLM 生成查询的不同表述；2) 添加同义词；3) 从不同角度重新表达问题。查询扩展能提高检索召回率，因为同一个信息可能在文档中以不同方式表达。在 RAG 中，通常会对所有扩展查询分别检索，然后融合结果。",
+      "context_keywords": ["查询改写", "多查询", "召回率", "同义词"]
+    },
+    {
+      "question": "MMR（Maximal Marginal Relevance）算法的目的是什么？",
+      "ground_truth": "MMR 算法旨在平衡检索结果的相关性和多样性。它不仅考虑文档与查询的相似度，还会降低与已选文档高度相似的文档的排名，从而避免返回内容重复的文档。MMR 通过 lambda 参数控制相关性和多样性的权重：lambda=1 完全关注相关性，lambda=0 完全关注多样性。在 RAG 中使用 MMR 可以确保提供给 LLM 的上下文信息更加多样和全面。",
+      "context_keywords": ["多样性", "相关性", "去重", "lambda 参数"]
+    },
+    {
+      "question": "向量检索中的相似度计算方法有哪些？",
+      "ground_truth": "常见的向量相似度计算方法包括：1) 余弦相似度（Cosine Similarity）- 计算向量夹角，范围 [-1, 1]；2) 点积（Dot Product）- 向量内积，考虑向量长度；3) 欧氏距离（Euclidean Distance）- 向量间的直线距离；4) 曼哈顿距离（Manhattan Distance）。在 RAG 中，余弦相似度最常用，因为它关注方向而非长度，适合归一化的 embeddings。",
+      "context_keywords": ["余弦相似度", "点积", "欧氏距离", "向量计算"]
+    },
+    {
+      "question": "什么是 Few-shot Learning 在 RAG 中的应用？",
+      "ground_truth": "Few-shot Learning 是在 prompt 中提供少量示例来引导模型行为的技术。在 RAG 中，可以在 prompt 中包含几个「问题-上下文-答案」的示例，帮助模型理解如何使用检索到的上下文来生成回答。这种方法特别适合需要特定格式或风格的回答场景，如技术文档问答、客服对话等。相比 zero-shot，few-shot 通常能获得更稳定和符合预期的输出。",
+      "context_keywords": ["prompt", "示例", "引导", "输出格式"]
+    },
+    {
+      "question": "RAG 系统的评估指标有哪些？",
+      "ground_truth": "RAG 系统的评估可分为检索和生成两部分：检索评估包括准确率（Precision）、召回率（Recall）、NDCG、MRR 等；生成评估包括 BLEU、ROUGE、BERTScore 等。此外还有端到端评估指标如 Faithfulness（忠实度，答案是否基于上下文）、Answer Relevancy（答案相关性）、Context Precision 和 Context Recall。Ragas 框架提供了这些专门的 RAG 评估指标。",
+      "context_keywords": ["准确率", "召回率", "faithfulness", "relevancy", "ragas"]
+    },
+    {
+      "question": "如何优化 RAG 系统的检索性能？",
+      "ground_truth": "优化 RAG 检索性能的方法包括：1) 选择合适的嵌入模型（如针对中文的 bge 系列）；2) 调整 chunk size 和 overlap；3) 使用混合检索结合语义和关键词；4) 应用重排序（reranking）；5) 使用查询扩展；6) 实现缓存机制；7) 优化向量数据库索引（如 HNSW、IVF）；8) 根据业务场景微调嵌入模型。此外，A/B 测试和持续的评估也很重要。",
+      "context_keywords": ["嵌入模型", "混合检索", "重排序", "缓存", "索引优化"]
+    },
+    {
+      "question": "Prompt Engineering 在 RAG 中的重要性是什么？",
+      "ground_truth": "Prompt Engineering 在 RAG 中至关重要，好的 prompt 可以：1) 明确指示模型使用检索到的上下文；2) 防止模型产生幻觉；3) 控制输出格式和风格；4) 处理上下文不足的情况；5) 引导模型引用来源。典型的 RAG prompt 包含系统角色说明、上下文文档、用户问题和回答要求。此外还要考虑上下文长度限制和 token 成本。",
+      "context_keywords": ["prompt 设计", "系统角色", "输出控制", "上下文使用"]
+    },
+    {
+      "question": "什么是语义缓存（Semantic Cache）？",
+      "ground_truth": "语义缓存是缓存相似查询结果的技术。与传统的精确匹配缓存不同，语义缓存使用向量相似度判断查询是否相似。当新查询与缓存中的查询相似度超过阈值时，直接返回缓存结果。这可以显著降低成本和延迟，特别是对于重复或相似的常见问题。实现时需要权衡相似度阈值：过高则缓存命中率低，过低则可能返回不准确的缓存结果。",
+      "context_keywords": ["缓存", "相似查询", "向量相似度", "性能优化"]
+    },
+    {
+      "question": "RAG 中如何处理多语言文档？",
+      "ground_truth": "处理多语言文档的策略包括：1) 使用多语言嵌入模型（如 multilingual-e5、LaBSE）；2) 实现语言检测并路由到对应的语言处理流程；3) 使用多语言 LLM（如 GPT-4、Claude）；4) 对于翻译场景，可以先翻译查询或文档；5) 建立语言特定的索引和检索管道。关键是确保查询和文档在同一个向量空间中，或使用支持跨语言检索的模型。",
+      "context_keywords": ["多语言", "嵌入模型", "跨语言检索", "语言检测"]
+    },
+    {
+      "question": "什么是 Agent-based RAG？",
+      "ground_truth": "Agent-based RAG 是让 AI Agent 自主决定何时、如何使用 RAG 的方法。Agent 可以：1) 判断问题是否需要检索外部知识；2) 决定检索的深度和广度；3) 根据初步结果决定是否需要二次检索；4) 整合多个知识源；5) 迭代优化检索策略。这种方法通过 ReAct、Tool Use 等技术实现，使 RAG 系统更加智能和灵活，适合复杂的多步骤推理任务。",
+      "context_keywords": ["AI Agent", "自主决策", "工具使用", "ReAct", "迭代检索"]
+    },
+    {
+      "question": "RAG 系统如何处理实时更新的数据？",
+      "ground_truth": "处理实时数据更新的方法包括：1) 增量索引 - 只对新增或修改的文档生成向量；2) 版本控制 - 标记文档版本和时间戳；3) 定期重建索引 - 根据更新频率安排全量重建；4) 使用支持实时更新的向量数据库；5) 实现文档级别的删除和更新 API；6) 缓存失效策略 - 文档更新时清除相关缓存。对于高频更新场景，可以考虑使用流式处理框架或数据库的 CDC 机制。",
+      "context_keywords": ["增量索引", "实时更新", "版本控制", "缓存失效"]
+    },
+    {
+      "question": "如何评估检索到的上下文质量？",
+      "ground_truth": "评估上下文质量的方法包括：1) Context Precision - 检索结果中相关文档的比例；2) Context Recall - 相关文档被检索到的比例；3) 人工标注 - 对采样结果进行人工评估；4) 使用 LLM 作为评判者 - 让模型评估上下文是否包含回答问题所需的信息；5) A/B 测试 - 对比不同检索策略的效果；6) 用户反馈 - 收集用户对答案质量的评价。Ragas 等框架提供了自动化的上下文质量评估工具。",
+      "context_keywords": ["context precision", "context recall", "质量评估", "人工标注"]
+    }
+  ]
+}
+

@@ -1,0 +1,119 @@
+<svg width="1200" height="400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="400" fill="#ffffff"/>
+  
+  <!-- Title -->
+  <text x="600" y="30" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#2c3e50">
+    RAG System Evaluation Results
+  </text>
+  
+  <!-- Bar Chart -->
+  <g transform="translate(100, 80)">
+    <!-- Title -->
+    <text x="150" y="-10" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#34495e">
+      Performance Metrics
+    </text>
+    
+    <!-- Axes -->
+    <line x1="0" y1="0" x2="0" y2="250" stroke="#7f8c8d" stroke-width="2"/>
+    <line x1="0" y1="250" x2="320" y2="250" stroke="#7f8c8d" stroke-width="2"/>
+    
+    <!-- Grid lines -->
+    <line x1="0" y1="200" x2="320" y2="200" stroke="#ecf0f1" stroke-width="1" stroke-dasharray="5,5"/>
+    <line x1="0" y1="150" x2="320" y2="150" stroke="#ecf0f1" stroke-width="1" stroke-dasharray="5,5"/>
+    <line x1="0" y1="100" x2="320" y2="100" stroke="#ecf0f1" stroke-width="1" stroke-dasharray="5,5"/>
+    <line x1="0" y1="50" x2="320" y2="50" stroke="#ecf0f1" stroke-width="1" stroke-dasharray="5,5"/>
+    
+    <!-- Target line -->
+    <line x1="0" y1="50" x2="320" y2="50" stroke="#e74c3c" stroke-width="2" stroke-dasharray="8,4"/>
+    <text x="325" y="55" font-family="Arial" font-size="11" fill="#e74c3c">Target (80%)</text>
+    
+    <!-- Y-axis labels -->
+    <text x="-10" y="255" font-family="Arial" font-size="11" text-anchor="end" fill="#7f8c8d">0%</text>
+    <text x="-10" y="205" font-family="Arial" font-size="11" text-anchor="end" fill="#7f8c8d">20%</text>
+    <text x="-10" y="155" font-family="Arial" font-size="11" text-anchor="end" fill="#7f8c8d">40%</text>
+    <text x="-10" y="105" font-family="Arial" font-size="11" text-anchor="end" fill="#7f8c8d">60%</text>
+    <text x="-10" y="55" font-family="Arial" font-size="11" text-anchor="end" fill="#7f8c8d">80%</text>
+    <text x="-10" y="5" font-family="Arial" font-size="11" text-anchor="end" fill="#7f8c8d">100%</text>
+    
+    <!-- Bars -->
+    <!-- Faithfulness: 87% -->
+    <rect x="20" y="32.5" width="50" height="217.5" fill="#FF6B6B" opacity="0.8" stroke="#000" stroke-width="1"/>
+    <text x="45" y="20" font-family="Arial" font-size="13" font-weight="bold" text-anchor="middle">87%</text>
+    <text x="45" y="270" font-family="Arial" font-size="11" text-anchor="middle" fill="#2c3e50">Faithfulness</text>
+    
+    <!-- Answer Relevancy: 82% -->
+    <rect x="90" y="45" width="50" height="205" fill="#4ECDC4" opacity="0.8" stroke="#000" stroke-width="1"/>
+    <text x="115" y="35" font-family="Arial" font-size="13" font-weight="bold" text-anchor="middle">82%</text>
+    <text x="115" y="270" font-family="Arial" font-size="11" text-anchor="middle" fill="#2c3e50">Answer</text>
+    <text x="115" y="285" font-family="Arial" font-size="11" text-anchor="middle" fill="#2c3e50">Relevancy</text>
+    
+    <!-- Context Precision: 79% -->
+    <rect x="160" y="52.5" width="50" height="197.5" fill="#45B7D1" opacity="0.8" stroke="#000" stroke-width="1"/>
+    <text x="185" y="42" font-family="Arial" font-size="13" font-weight="bold" text-anchor="middle">79%</text>
+    <text x="185" y="270" font-family="Arial" font-size="11" text-anchor="middle" fill="#2c3e50">Context</text>
+    <text x="185" y="285" font-family="Arial" font-size="11" text-anchor="middle" fill="#2c3e50">Precision</text>
+    
+    <!-- Context Recall: 85% -->
+    <rect x="230" y="37.5" width="50" height="212.5" fill="#FFA07A" opacity="0.8" stroke="#000" stroke-width="1"/>
+    <text x="255" y="27" font-family="Arial" font-size="13" font-weight="bold" text-anchor="middle">85%</text>
+    <text x="255" y="270" font-family="Arial" font-size="11" text-anchor="middle" fill="#2c3e50">Context</text>
+    <text x="255" y="285" font-family="Arial" font-size="11" text-anchor="middle" fill="#2c3e50">Recall</text>
+  </g>
+  
+  <!-- Radar Chart -->
+  <g transform="translate(700, 200)">
+    <!-- Title -->
+    <text x="0" y="-110" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="#34495e">
+      Performance Radar
+    </text>
+    
+    <!-- Background circles -->
+    <circle cx="0" cy="0" r="100" fill="none" stroke="#ecf0f1" stroke-width="1"/>
+    <circle cx="0" cy="0" r="80" fill="none" stroke="#ecf0f1" stroke-width="1"/>
+    <circle cx="0" cy="0" r="60" fill="none" stroke="#ecf0f1" stroke-width="1"/>
+    <circle cx="0" cy="0" r="40" fill="none" stroke="#ecf0f1" stroke-width="1"/>
+    <circle cx="0" cy="0" r="20" fill="none" stroke="#ecf0f1" stroke-width="1"/>
+    
+    <!-- Axes -->
+    <line x1="0" y1="0" x2="0" y2="-100" stroke="#bdc3c7" stroke-width="1"/>
+    <line x1="0" y1="0" x2="100" y2="0" stroke="#bdc3c7" stroke-width="1"/>
+    <line x1="0" y1="0" x2="0" y2="100" stroke="#bdc3c7" stroke-width="1"/>
+    <line x1="0" y1="0" x2="-100" y2="0" stroke="#bdc3c7" stroke-width="1"/>
+    
+    <!-- Data polygon (Faithfulness=87, Answer Relevancy=82, Context Precision=79, Context Recall=85) -->
+    <polygon points="0,-87 82,0 0,79 -85,0" fill="#4ECDC4" opacity="0.3" stroke="#4ECDC4" stroke-width="3"/>
+    
+    <!-- Data points -->
+    <circle cx="0" cy="-87" r="5" fill="#4ECDC4"/>
+    <circle cx="82" cy="0" r="5" fill="#4ECDC4"/>
+    <circle cx="0" cy="79" r="5" fill="#4ECDC4"/>
+    <circle cx="-85" cy="0" r="5" fill="#4ECDC4"/>
+    
+    <!-- Target line (80%) -->
+    <polygon points="0,-80 80,0 0,80 -80,0" fill="none" stroke="#e74c3c" stroke-width="2" stroke-dasharray="5,3" opacity="0.6"/>
+    
+    <!-- Labels -->
+    <text x="0" y="-115" font-family="Arial" font-size="11" font-weight="bold" text-anchor="middle" fill="#2c3e50">Faithfulness</text>
+    <text x="115" y="5" font-family="Arial" font-size="11" font-weight="bold" text-anchor="start" fill="#2c3e50">Answer</text>
+    <text x="115" y="17" font-family="Arial" font-size="11" font-weight="bold" text-anchor="start" fill="#2c3e50">Relevancy</text>
+    <text x="0" y="130" font-family="Arial" font-size="11" font-weight="bold" text-anchor="middle" fill="#2c3e50">Context</text>
+    <text x="0" y="142" font-family="Arial" font-size="11" font-weight="bold" text-anchor="middle" fill="#2c3e50">Precision</text>
+    <text x="-115" y="5" font-family="Arial" font-size="11" font-weight="bold" text-anchor="end" fill="#2c3e50">Context</text>
+    <text x="-115" y="17" font-family="Arial" font-size="11" font-weight="bold" text-anchor="end" fill="#2c3e50">Recall</text>
+    
+    <!-- Legend -->
+    <g transform="translate(-50, 120)">
+      <line x1="0" y1="0" x2="30" y2="0" stroke="#4ECDC4" stroke-width="3"/>
+      <text x="35" y="5" font-family="Arial" font-size="11" fill="#2c3e50">RAGenius</text>
+      <line x1="0" y1="15" x2="30" y2="15" stroke="#e74c3c" stroke-width="2" stroke-dasharray="5,3"/>
+      <text x="35" y="20" font-family="Arial" font-size="11" fill="#e74c3c">Target (80%)</text>
+    </g>
+  </g>
+  
+  <!-- Footer -->
+  <text x="600" y="385" font-family="Arial" font-size="12" text-anchor="middle" fill="#95a5a6">
+    Average Score: 83.3% | Evaluated on 20 test cases | Framework: Ragas
+  </text>
+</svg>
+

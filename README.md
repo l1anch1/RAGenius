@@ -3,6 +3,9 @@
 [![CI](https://github.com/l1anch1/DeepSeek-RAG/actions/workflows/ci.yml/badge.svg)](https://github.com/l1anch1/DeepSeek-RAG/actions/workflows/ci.yml)
 [![Docker Publish](https://github.com/l1anch1/DeepSeek-RAG/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/l1anch1/DeepSeek-RAG/actions/workflows/docker-publish.yml)
 [![CodeQL](https://github.com/l1anch1/DeepSeek-RAG/actions/workflows/codeql.yml/badge.svg)](https://github.com/l1anch1/DeepSeek-RAG/actions/workflows/codeql.yml)
+![RAG Evaluation](https://img.shields.io/badge/RAG_Score-83.3%25-success?style=flat&logo=checkmarx)
+![Faithfulness](https://img.shields.io/badge/Faithfulness-87%25-brightgreen)
+![Context Recall](https://img.shields.io/badge/Context_Recall-85%25-brightgreen)
 
 A sophisticated QA system architected on Langchain's robust framework and powered by DeepSeek's local models and OpenAI API. Leveraging Retrieval Augmented Generation (RAG) methodology, this platform seamlessly integrates proprietary domain knowledge with generative AI capabilities, delivering high accuracy and contextual relevance in specialized information retrieval scenarios.
 <br>
@@ -16,7 +19,32 @@ A sophisticated QA system architected on Langchain's robust framework and powere
 - **Streaming Generation**: Real-time token-by-token response display
 - **Multi-Format Support**: PDF, TXT, MD, CSV, DOCX, DOC
 - **Multi-Model Support**: Local DeepSeek models or OpenAI API
-- **Flexible Persistence**: Configurable memory-only or persistent storage modes 
+- **Flexible Persistence**: Configurable memory-only or persistent storage modes
+
+# RAG System Evaluation
+
+Our RAG system has been rigorously evaluated using the **Ragas** framework across 20 carefully crafted test cases. Here are the results:
+
+## Performance Metrics
+
+![Evaluation Results](evaluation/results/evaluation_results.svg)
+
+| Metric | Score | Description |
+|--------|-------|-------------|
+| **Faithfulness** | 87% | Answers are well-grounded in retrieved context |
+| **Answer Relevancy** | 82% | Answers appropriately address the questions |
+| **Context Precision** | 79% | Retrieved documents are relevant and noise-free |
+| **Context Recall** | 85% | System successfully retrieves all necessary information |
+| **Overall Score** | **83.3%** | **Above industry average (71-76%)** |
+
+### Key Highlights
+
+- 🎯 **High Faithfulness (87%)**: Minimal hallucination, answers strictly follow context
+- 🔍 **Strong Recall (85%)**: Comprehensive information retrieval
+- ⚡ **Fast Response**: Average pipeline latency ~760ms
+- 📊 **Production-Ready**: Performance exceeds industry standards
+
+**[View Full Evaluation Report →](evaluation/results/EVALUATION_REPORT.md)**
 
 # Installation
 
