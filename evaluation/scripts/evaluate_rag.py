@@ -29,7 +29,13 @@ try:
     RAGAS_AVAILABLE = True
 except ImportError:
     print("⚠️  Ragas not installed. Install with: pip install ragas datasets")
+    print("⚠️  Will use simplified evaluation metrics")
     RAGAS_AVAILABLE = False
+    # Mock Dataset class
+    class Dataset:
+        @staticmethod
+        def from_dict(data):
+            return data
 
 # Matplotlib 中文字体配置
 plt.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'DejaVu Sans']
