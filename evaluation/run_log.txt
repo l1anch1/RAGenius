@@ -1,0 +1,28 @@
+/Users/lianchi/.matplotlib is not a writable directory
+Matplotlib created a temporary cache directory at /var/folders/21/63c_xwy9031fksdr70l6vht80000gn/T/matplotlib-7i_c9xxt because there was an issue with the default path (/Users/lianchi/.matplotlib); it is highly recommended to set the MPLCONFIGDIR environment variable to a writable directory, in particular to speed up the import of Matplotlib and to better support multiprocessing.
+Matplotlib is building the font cache; this may take a moment.
+⚠️  Ragas not installed. Install with: pip install ragas datasets
+⚠️  Will use simplified evaluation metrics
+✅ 加载了 72 个测试用例
+🔗 后端服务: http://localhost:8000
+======================================================================
+🚀 RAGenius - Real RAG System Evaluation
+======================================================================
+Traceback (most recent call last):
+  File "/Users/lianchi/Documents/CS/RAGenius/evaluation/scripts/evaluate_rag.py", line 539, in <module>
+    main()
+  File "/Users/lianchi/Documents/CS/RAGenius/evaluation/scripts/evaluate_rag.py", line 535, in main
+    evaluator.run_full_evaluation(skip_upload=args.skip_upload)
+  File "/Users/lianchi/Documents/CS/RAGenius/evaluation/scripts/evaluate_rag.py", line 452, in run_full_evaluation
+    if not self.check_backend_health():
+  File "/Users/lianchi/Documents/CS/RAGenius/evaluation/scripts/evaluate_rag.py", line 72, in check_backend_health
+    import requests
+  File "/Users/lianchi/miniconda3/envs/RAG/lib/python3.9/site-packages/requests/__init__.py", line 164, in <module>
+    from .api import delete, get, head, options, patch, post, put, request
+  File "/Users/lianchi/miniconda3/envs/RAG/lib/python3.9/site-packages/requests/api.py", line 11, in <module>
+    from . import sessions
+  File "/Users/lianchi/miniconda3/envs/RAG/lib/python3.9/site-packages/requests/sessions.py", line 15, in <module>
+    from .adapters import HTTPAdapter
+  File "/Users/lianchi/miniconda3/envs/RAG/lib/python3.9/site-packages/requests/adapters.py", line 81, in <module>
+    _preloaded_ssl_context.load_verify_locations(
+PermissionError: [Errno 1] Operation not permitted

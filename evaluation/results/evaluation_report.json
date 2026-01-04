@@ -12,4 +12,3 @@
     "best_metric": "faithfulness",
     "worst_metric": "context_precision"
   }
-}
