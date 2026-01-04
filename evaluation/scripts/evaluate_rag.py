@@ -39,17 +39,19 @@ plt.rcParams['axes.unicode_minus'] = False
 class RAGEvaluator:
     """RAG 系统评估器"""
     
-    def __init__(self, test_data_path: str, output_dir: str):
+    def __init__(self, test_data_path: str, output_dir: str, backend_url: str = "http://localhost:8000"):
         """
         初始化评估器
         
         Args:
             test_data_path: 测试数据集路径
             output_dir: 输出目录
+            backend_url: 后端 API 地址
         """
         self.test_data_path = test_data_path
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.backend_url = backend_url
         
         # 加载测试数据
         with open(test_data_path, 'r', encoding='utf-8') as f:
@@ -57,29 +59,164 @@ class RAGEvaluator:
             self.test_cases = data['test_cases']
         
         print(f"✅ 加载了 {len(self.test_cases)} 个测试用例")
+        print(f"🔗 后端服务: {self.backend_url}")
+    
+    def check_backend_health(self) -> bool:
+        """检查后端服务是否可用"""
+        import requests
+        
+        try:
+            response = requests.get(f"{self.backend_url}/api/health", timeout=5)
+            if response.status_code == 200:
+                print("✅ 后端服务正常")
+                return True
+            else:
+                print(f"⚠️  后端服务响应异常: {response.status_code}")
+                return False
+        except Exception as e:
+            print(f"❌ 无法连接到后端服务: {e}")
+            print(f"   请确保后端运行在: {self.backend_url}")
+            return False
+    
+    def upload_knowledge_base(self, docs_dir: Path) -> bool:
+        """上传知识库文档"""
+        import requests
+        
+        print(f"\n📚 上传知识库文档...")
+        
+        doc_files = list(docs_dir.glob("*.md")) + list(docs_dir.glob("*.txt")) + list(docs_dir.glob("*.pdf"))
+        
+        if not doc_files:
+            print(f"⚠️  未找到文档: {docs_dir}")
+            return False
+        
+        uploaded_count = 0
+        for doc_file in doc_files:
+            try:
+                with open(doc_file, 'rb') as f:
+                    files = {'file': (doc_file.name, f)}
+                    response = requests.post(
+                        f"{self.backend_url}/api/documents/upload",
+                        files=files,
+                        timeout=30
+                    )
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        if data.get('status') == 'success':
+                            print(f"  ✅ {doc_file.name}")
+                            uploaded_count += 1
+                        else:
+                            # 可能是文件已存在
+                            print(f"  ⚠️  {doc_file.name}: {data.get('message', 'Unknown')}")
+                    else:
+                        print(f"  ❌ {doc_file.name}: HTTP {response.status_code}")
+                        
+            except Exception as e:
+                print(f"  ❌ {doc_file.name}: {e}")
+        
+        print(f"📦 成功上传 {uploaded_count}/{len(doc_files)} 个文档")
+        return uploaded_count > 0
+    
+    def rebuild_knowledge_base(self) -> bool:
+        """重建知识库"""
+        import requests
+        
+        print("\n🔨 重建知识库...")
+        
+        try:
+            response = requests.post(
+                f"{self.backend_url}/api/rebuild",
+                timeout=120  # 重建可能需要较长时间
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('status') == 'success':
+                    print("✅ 知识库重建成功")
+                    return True
+                else:
+                    print(f"❌ 重建失败: {data.get('message', 'Unknown error')}")
+                    return False
+            else:
+                print(f"❌ HTTP {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            print(f"❌ 重建出错: {e}")
+            return False
     
     def run_rag_query(self, question: str) -> Dict[str, Any]:
         """
-        运行 RAG 查询（模拟）
+        运行真实的 RAG 查询
         
-        实际使用时，这里应该调用真实的 RAG 系统
+        Args:
+            question: 用户问题
+        
+        Returns:
+            包含 answer 和 contexts 的字典
         """
-        # 这里使用模拟数据
-        # 实际部署时，应该调用真实的后端 API
+        import requests
         
-        # 模拟检索到的上下文
-        contexts = [
-            "RAG 是一种结合信息检索和文本生成的技术...",
-            "向量数据库负责存储文档的向量表示..."
-        ]
-        
-        # 模拟生成的答案
-        answer = f"根据文档，{question}的答案是..."
-        
-        return {
-            "answer": answer,
-            "contexts": contexts
-        }
+        try:
+            # 调用真实的 RAG API
+            response = requests.post(
+                f"{self.backend_url}/api/query",
+                json={"query": question},
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if data.get('status') == 'success':
+                    # 提取答案
+                    answer = data.get('answer', '')
+                    
+                    # 提取上下文（从 sources）
+                    sources = data.get('sources', [])
+                    contexts = [s.get('content', '') for s in sources if s.get('content')]
+                    
+                    # 如果没有上下文，至少返回答案
+                    if not contexts:
+                        contexts = [answer]  # Ragas 需要至少一个 context
+                    
+                    return {
+                        "answer": answer,
+                        "contexts": contexts
+                    }
+                else:
+                    logger.warning(f"Query failed: {data.get('message', 'Unknown error')}")
+                    return {
+                        "answer": "查询失败",
+                        "contexts": ["无可用上下文"]
+                    }
+            else:
+                logger.error(f"HTTP {response.status_code}: {response.text}")
+                return {
+                    "answer": "API 请求失败",
+                    "contexts": ["服务器错误"]
+                }
+                
+        except requests.exceptions.Timeout:
+            logger.error("请求超时")
+            return {
+                "answer": "请求超时",
+                "contexts": ["超时错误"]
+            }
+        except requests.exceptions.ConnectionError:
+            logger.error(f"无法连接到后端服务器: {backend_url}")
+            logger.error("请确保后端服务正在运行！")
+            return {
+                "answer": "无法连接到服务器",
+                "contexts": ["连接错误"]
+            }
+        except Exception as e:
+            logger.error(f"查询出错: {e}")
+            return {
+                "answer": f"错误: {str(e)}",
+                "contexts": ["未知错误"]
+            }
     
     def prepare_evaluation_dataset(self) -> Dataset:
         """准备评估数据集"""
@@ -295,27 +432,56 @@ class RAGEvaluator:
         
         print(f"✅ Markdown 报告已保存: {report_path}")
     
-    def run_full_evaluation(self):
-        """运行完整评估流程"""
-        print("="*60)
-        print("🚀 RAGenius - RAG System Evaluation")
-        print("="*60)
+    def run_full_evaluation(self, skip_upload: bool = False):
+        """运行完整评估流程
         
-        # 1. 准备数据集
+        Args:
+            skip_upload: 是否跳过文档上传（如果已经上传过）
+        """
+        print("="*70)
+        print("🚀 RAGenius - Real RAG System Evaluation")
+        print("="*70)
+        
+        # 1. 检查后端服务
+        if not self.check_backend_health():
+            print("\n❌ 后端服务不可用，评估终止")
+            print("💡 启动后端: cd /path/to/RAGenius && docker compose up -d")
+            return
+        
+        # 2. 上传知识库文档（如果需要）
+        if not skip_upload:
+            project_root = Path(__file__).parent.parent.parent
+            docs_dir = project_root / "evaluation" / "data" / "sample_docs"
+            
+            if self.upload_knowledge_base(docs_dir):
+                # 3. 重建知识库
+                if not self.rebuild_knowledge_base():
+                    print("\n❌ 知识库重建失败，评估终止")
+                    return
+                
+                # 等待索引完成
+                print("⏳ 等待索引稳定...")
+                time.sleep(3)
+            else:
+                print("⚠️  文档上传失败，将使用现有知识库")
+        else:
+            print("\n⏭️  跳过文档上传（使用现有知识库）")
+        
+        # 4. 准备数据集（运行真实查询）
         dataset = self.prepare_evaluation_dataset()
         
-        # 2. 运行评估
+        # 5. 运行评估
         results = self.evaluate_with_ragas(dataset)
         
-        # 3. 可视化
+        # 6. 可视化
         self.visualize_results(results)
         
-        # 4. 生成报告
+        # 7. 生成报告
         report = self.generate_report(results)
         
-        print("\n" + "="*60)
+        print("\n" + "="*70)
         print("✅ 评估完成!")
-        print("="*60)
+        print("="*70)
         print(f"\n📊 平均分数: {report['summary']['average_score']:.3f}")
         print(f"🏆 最佳指标: {report['summary']['best_metric']}")
         print(f"📈 待提升: {report['summary']['worst_metric']}")
@@ -324,19 +490,43 @@ class RAGEvaluator:
 
 def main():
     """主函数"""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='RAGenius RAG System Evaluation')
+    parser.add_argument(
+        '--backend-url',
+        type=str,
+        default='http://localhost:8000',
+        help='后端 API 地址 (默认: http://localhost:8000)'
+    )
+    parser.add_argument(
+        '--skip-upload',
+        action='store_true',
+        help='跳过文档上传（使用现有知识库）'
+    )
+    parser.add_argument(
+        '--output-dir',
+        type=str,
+        default=None,
+        help='结果输出目录'
+    )
+    
+    args = parser.parse_args()
+    
     # 设置路径
     project_root = Path(__file__).parent.parent.parent
     test_data_path = project_root / "evaluation" / "data" / "test_dataset.json"
-    output_dir = project_root / "evaluation" / "results"
+    output_dir = Path(args.output_dir) if args.output_dir else project_root / "evaluation" / "results"
     
     # 创建评估器
     evaluator = RAGEvaluator(
         test_data_path=str(test_data_path),
-        output_dir=str(output_dir)
+        output_dir=str(output_dir),
+        backend_url=args.backend_url
     )
     
     # 运行评估
-    evaluator.run_full_evaluation()
+    evaluator.run_full_evaluation(skip_upload=args.skip_upload)
 
 
 if __name__ == "__main__":

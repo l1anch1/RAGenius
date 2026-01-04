@@ -34,30 +34,47 @@ cat evaluation/results/EVALUATION_REPORT.md
 open evaluation/results/EVALUATION_REPORT.md
 ```
 
-### Option 2: Run Quick Demo
+### Option 2: Test Backend Connection
+
+```bash
+# Make sure backend is running first
+docker compose up -d
+
+# Test connection
+python3 evaluation/test_connection.py
+
+# Or test remote backend
+python3 evaluation/test_connection.py --backend-url http://your-server:8000
+```
+
+### Option 3: Run Real Evaluation on Your System
+
+**Prerequisites:**
+1. Backend must be running (`docker compose up -d`)
+2. Install dependencies: `pip install -r evaluation/requirements.txt`
+
+```bash
+# Evaluate local backend
+./evaluation/run_evaluation.sh
+
+# Evaluate with custom backend URL
+./evaluation/run_evaluation.sh --backend-url http://your-server:8000
+
+# Skip document upload (use existing knowledge base)
+./evaluation/run_evaluation.sh --skip-upload
+
+# Or run Python script directly
+python3 evaluation/scripts/evaluate_rag.py --backend-url http://localhost:8000
+```
+
+### Option 4: Run Quick Demo (No Backend Required)
 
 ```bash
 # Install minimal dependencies
 pip install matplotlib seaborn pandas
 
-# Run demo (generates visualization)
+# Run demo (generates visualization only)
 python3 evaluation/scripts/quick_demo.py
-```
-
-### Option 3: Full Evaluation with Ragas
-
-```bash
-# Install all dependencies
-pip install -r evaluation/requirements.txt
-
-# Set OpenAI API key (required for Ragas)
-export OPENAI_API_KEY=your_key_here
-
-# Run evaluation
-./evaluation/run_evaluation.sh
-
-# Or run directly
-python3 evaluation/scripts/evaluate_rag.py
 ```
 
 ## 📊 Evaluation Metrics
