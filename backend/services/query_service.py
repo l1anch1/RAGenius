@@ -56,13 +56,13 @@ class QueryService(QueryServiceInterface):
         执行检索流程（抽取的公共方法）
         
         Returns:
-            (retrieved_docs_for_llm, sources, retrieval_metadata)
+            (retrieved_docs_for_llm, sources, retrieval_metadata, low_confidence)
         """
         vector_store = self.vector_store_manager.get_store()
         
         if not vector_store:
             logger.info("Knowledge base not initialized")
-            return [], [], {}
+            return [], [], {}, True  # low_confidence=True when no knowledge base
         
         try:
             collection = vector_store._collection
