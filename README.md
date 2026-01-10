@@ -23,7 +23,7 @@ A sophisticated QA system architected on Langchain's robust framework and powere
 
 # RAG System Evaluation
 
-Our RAG system has been rigorously evaluated using the **Ragas** framework across 20 carefully crafted test cases. Here are the results:
+Our RAG system has been rigorously evaluated using the **Ragas** framework across 100 carefully crafted test cases. Here are the results:
 
 ## Performance Metrics
 

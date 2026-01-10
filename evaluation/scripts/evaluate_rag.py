@@ -16,6 +16,36 @@ from tqdm import tqdm
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "backend"))
 
+# Load .env file if exists (for OPENAI_API_KEY)
+from dotenv import load_dotenv
+load_dotenv()
+
+# Check and configure OpenAI API for Ragas
+api_key = os.environ.get("OPENAI_API_KEY")
+api_base = os.environ.get("OPENAI_API_BASE", "")
+
+if not api_key:
+    print("❌ Error: OPENAI_API_KEY environment variable is required")
+    print("\n📝 Ragas needs OpenAI API to evaluate answer quality.")
+    print("   This is separate from your RAGenius system's API key.\n")
+    print("🔧 Solutions:")
+    print("   1. Add to .env file:")
+    print("      OPENAI_API_KEY=sk-your-official-openai-key-here")
+    print("\n   2. Or set environment variable:")
+    print("      export OPENAI_API_KEY=sk-your-key-here")
+    print("\n   3. If using OpenAI proxy:")
+    print("      export OPENAI_API_KEY=your-proxy-key")
+    print("      export OPENAI_API_BASE=https://your-proxy-url/v1")
+    print("\n💡 Note: Some proxy keys may not work with Ragas.")
+    print("   Consider using an official OpenAI key for evaluation.")
+    print("\n💡 Run again after setting the API key.")
+    sys.exit(1)
+
+# 配置 OpenAI client for Ragas
+if api_base:
+    print(f"ℹ️  Using custom OpenAI base URL: {api_base}")
+    os.environ["OPENAI_API_BASE"] = api_base
+
 # Import RAG components
 try:
     from datasets import Dataset
@@ -26,16 +56,12 @@ try:
         context_precision,
         context_recall,
     )
-    RAGAS_AVAILABLE = True
-except ImportError:
-    print("⚠️  Ragas not installed. Install with: pip install ragas datasets")
-    print("⚠️  Will use simplified evaluation metrics")
-    RAGAS_AVAILABLE = False
-    # Mock Dataset class
-    class Dataset:
-        @staticmethod
-        def from_dict(data):
-            return data
+except ImportError as e:
+    print("❌ Error: Ragas and required dependencies must be installed.")
+    print("📦 Install with: pip install -r evaluation/requirements.txt")
+    print("\n💡 If you're using Python 3.9, also install:")
+    print("   pip install eval_type_backport")
+    sys.exit(1)
 
 # Matplotlib 中文字体配置
 plt.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'DejaVu Sans']
@@ -259,10 +285,6 @@ class RAGEvaluator:
     
     def evaluate_with_ragas(self, dataset: Dataset) -> Dict[str, float]:
         """使用 Ragas 评估"""
-        if not RAGAS_AVAILABLE:
-            print("❌ Ragas 未安装，跳过评估")
-            return {}
-        
         print("\n📊 使用 Ragas 评估...")
         
         try:
@@ -277,25 +299,61 @@ class RAGEvaluator:
                 ],
             )
             
-            return result
+            # 转换 EvaluationResult 为字典
+            # Ragas 返回的是 EvaluationResult 对象，需要提取分数
+            if hasattr(result, 'to_pandas'):
+                # 从 DataFrame 获取平均分数
+                df = result.to_pandas()
+                scores = {
+                    'faithfulness': df['faithfulness'].mean(),
+                    'answer_relevancy': df['answer_relevancy'].mean(),
+                    'context_precision': df['context_precision'].mean(),
+                    'context_recall': df['context_recall'].mean(),
+                }
+            elif isinstance(result, dict):
+                # 如果已经是字典
+                scores = result
+            else:
+                # 尝试直接访问属性
+                scores = {
+                    'faithfulness': getattr(result, 'faithfulness', 0.0),
+                    'answer_relevancy': getattr(result, 'answer_relevancy', 0.0),
+                    'context_precision': getattr(result, 'context_precision', 0.0),
+                    'context_recall': getattr(result, 'context_recall', 0.0),
+                }
+            
+            print(f"\n✅ 评估完成！")
+            print(f"   Faithfulness: {scores.get('faithfulness', 0):.2%}")
+            print(f"   Answer Relevancy: {scores.get('answer_relevancy', 0):.2%}")
+            print(f"   Context Precision: {scores.get('context_precision', 0):.2%}")
+            print(f"   Context Recall: {scores.get('context_recall', 0):.2%}")
+            
+            return scores
+            
         except Exception as e:
-            print(f"❌ 评估失败: {e}")
-            # 返回模拟数据用于演示
-            return self._generate_mock_results()
-    
-    def _generate_mock_results(self) -> Dict[str, float]:
-        """生成模拟评估结果（当 Ragas 不可用时）"""
-        print("⚠️  使用模拟评估结果")
-        return {
-            'faithfulness': 0.87,
-            'answer_relevancy': 0.82,
-            'context_precision': 0.79,
-            'context_recall': 0.85,
-        }
+            print(f"❌ 评估过程出错: {e}")
+            print(f"   错误类型: {type(e).__name__}")
+            import traceback
+            traceback.print_exc()
+            raise
     
     def visualize_results(self, results: Dict[str, float]):
         """可视化评估结果"""
         print("\n📈 生成可视化图表...")
+        
+        # 确保 results 是字典
+        if not isinstance(results, dict):
+            print(f"⚠️  警告: results 不是字典类型，而是 {type(results)}")
+            if hasattr(results, '__dict__'):
+                results = results.__dict__
+            else:
+                print("❌ 无法转换 results，使用默认值")
+                results = {
+                    'faithfulness': 0.0,
+                    'answer_relevancy': 0.0,
+                    'context_precision': 0.0,
+                    'context_recall': 0.0,
+                }
         
         # 提取指标
         metrics = list(results.keys())

@@ -173,68 +173,63 @@ apt update && apt upgrade -y
 
 ---
 
-## ⚡ 一键部署
+## ⚡ 手动部署
 
-### 方法 1：直接运行（推荐）
-
-```bash
-# 复制以下命令，在服务器终端粘贴运行
-bash <(curl -fsSL https://raw.githubusercontent.com/l1anch1/DeepSeek-RAG/main/deploy_aliyun.sh)
-```
-
-### 方法 2：下载后运行
+### 步骤 1：安装 Docker
 
 ```bash
-# 1. 下载脚本
-wget https://raw.githubusercontent.com/l1anch1/DeepSeek-RAG/main/deploy_aliyun.sh
+# 更新系统
+apt update && apt upgrade -y
 
-# 2. 添加执行权限
-chmod +x deploy_aliyun.sh
+# 安装 Docker
+curl -fsSL https://get.docker.com | sh
 
-# 3. 运行脚本
-./deploy_aliyun.sh
+# 启动 Docker
+systemctl enable docker
+systemctl start docker
+
+# 验证安装
+docker --version
 ```
 
-### 方法 3：手动复制粘贴
+### 步骤 2：克隆项目
 
-1. 在本地打开 `deploy_aliyun.sh` 文件
-2. 复制全部内容（Cmd+A, Cmd+C）
-3. 在服务器终端输入：
-   ```bash
-   cat > deploy.sh
-   ```
-4. 粘贴脚本内容（Cmd+V）
-5. 按 `Ctrl+D` 保存
-6. 运行：
-   ```bash
-   bash deploy.sh
-   ```
+```bash
+# 创建项目目录
+mkdir -p /opt/ragenius
+cd /opt/ragenius
 
-### ⏱️ 部署过程
-
-脚本会自动完成以下操作（约 5-10 分钟）：
-
-```
-[1/11] 检测系统信息          ✅
-[2/11] 配置阿里云镜像源      ⚡ 加速下载
-[3/11] 更新系统              📦
-[4/11] 安装 Docker           🐳
-[5/11] 配置 Docker 镜像加速  ⚡
-[6/11] 安装必要工具          🔧
-[7/11] 配置防火墙            🔥
-[8/11] 克隆项目代码          📥
-[9/11] 创建配置文件          ⚙️
-[10/11] 启动服务             🚀 (需要 3-5 分钟)
-[11/11] 配置 Nginx           🌐
+# 克隆代码
+git clone https://github.com/l1anch1/DeepSeek-RAG.git .
 ```
 
-部署完成后，你会看到：
+### 步骤 3：配置环境
 
+```bash
+# 复制配置模板
+cp .env.example .env
+
+# 编辑配置
+nano .env
+# 设置你的 API Key
 ```
-╔═══════════════════════════════════════════════════════════════╗
-║                    ✅ 部署完成！                              ║
-╚═══════════════════════════════════════════════════════════════╝
+
+### 步骤 4：启动服务
+
+```bash
+# 构建并启动
+docker compose up -d --build
+
+# 查看状态
+docker compose ps
+
+# 查看日志
+docker compose logs -f
 ```
+
+### ⏱️ 部署时间
+
+首次部署约需 5-10 分钟（需要下载镜像和构建）
 
 ---
 
@@ -389,10 +384,9 @@ docker compose ps
 
 **期望输出：**
 ```
-NAME                STATUS              PORTS
-backend             running (healthy)   0.0.0.0:8000->8000/tcp
-frontend            running             0.0.0.0:3000->3000/tcp
-chroma_db           running             0.0.0.0:8001->8001/tcp
+NAME                 STATUS              PORTS
+ragenius-backend     running (healthy)   0.0.0.0:8000->8000/tcp
+ragenius-frontend    running             0.0.0.0:3000->80/tcp
 ```
 
 ### 2. 测试后端 API
@@ -771,10 +765,9 @@ gzip_types text/plain text/css application/json application/javascript;
 
 ## 📚 相关文档
 
-- [项目 README](../README.md)
-- [快速部署指南](../QUICK_DEPLOY.md)
-- [通用部署指南](../DEPLOYMENT_GUIDE.md)
-- [无需备案方案对比](../NO_BEIAN_DEPLOY.md)
+- [项目 README](./README.md)
+- [持久化配置](./PERSISTENCE_CONFIG.md)
+- [文档管理](./DOCUMENT_MANAGEMENT.md)
 
 ---
 

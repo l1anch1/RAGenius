@@ -1,5 +1,24 @@
 # RAG System Evaluation - 使用指南
 
+## ⚠️ 重要前提
+
+**Ragas 需要 OpenAI API Key** 来评估答案质量。请确保：
+
+```bash
+# 方式 1: 在 .env 文件中设置
+OPENAI_API_KEY=sk-your-openai-key-here
+
+# 方式 2: 临时设置环境变量
+export OPENAI_API_KEY=sk-your-key-here
+
+# 方式 3: 使用现有的 RAGenius key
+export OPENAI_API_KEY=$(grep LLM_OPENAI_API_KEY .env | cut -d '=' -f2)
+```
+
+💡 **为什么需要？** Ragas 使用 LLM 作为"评判者"来评估答案的忠实度和相关性。
+
+---
+
 ## 🎯 快速开始
 
 ### Step 1: 启动后端服务
@@ -18,7 +37,14 @@ docker compose logs -f backend
 # 按 Ctrl+C 退出日志查看
 ```
 
-### Step 2: 测试后端连接
+### Step 2: 配置 API Key（如果还没有）
+
+```bash
+# 添加到 .env 文件
+echo "OPENAI_API_KEY=sk-your-key-here" >> .env
+```
+
+### Step 3: 测试后端连接
 
 ```bash
 # 测试连接
@@ -31,7 +57,7 @@ python3 evaluation/test_connection.py
 # ✅ Query successful
 ```
 
-### Step 3: 运行评估
+### Step 4: 运行评估
 
 ```bash
 # 方式 A: 使用脚本（推荐）
@@ -46,13 +72,6 @@ python3 evaluation/scripts/evaluate_rag.py
 ### 1. 完整评估（首次运行）
 
 ```bash
-# 这会：
-# 1. 检查后端连接
-# 2. 上传示例文档（evaluation/data/sample_docs/）
-# 3. 重建知识库
-# 4. 运行 20 个测试问题
-# 5. 生成评估报告和可视化
-
 ./evaluation/run_evaluation.sh
 ```
 
@@ -155,99 +174,6 @@ result = evaluate(
         answer_correctness,
     ],
 )
-```
-
-## 🐛 故障排查
-
-### 问题 1: 后端连接失败
-
-```
-❌ Backend not available at http://localhost:8000
-```
-
-**解决方案**:
-
-```bash
-# 检查后端是否运行
-docker compose ps
-
-# 如果没有运行，启动它
-docker compose up -d
-
-# 检查日志
-docker compose logs backend
-
-# 测试连接
-curl http://localhost:8000/api/health
-```
-
-### 问题 2: 依赖安装失败
-
-```
-❌ Failed to install dependencies
-```
-
-**解决方案**:
-
-```bash
-# 升级 pip
-python3 -m pip install --upgrade pip
-
-# 单独安装依赖
-pip3 install requests tqdm
-pip3 install ragas datasets
-pip3 install matplotlib seaborn pandas
-```
-
-### 问题 3: 查询超时
-
-```
-⚠️  请求超时
-```
-
-**解决方案**:
-
-```python
-# 在 evaluate_rag.py 中增加超时时间
-response = requests.post(
-    f"{self.backend_url}/api/query",
-    json={"query": question},
-    timeout=60  # 增加到 60 秒
-)
-```
-
-### 问题 4: Ragas 评估失败
-
-```
-❌ 评估失败: OpenAI API key not found
-```
-
-**解决方案**:
-
-```bash
-# 设置 OpenAI API Key（Ragas 需要）
-export OPENAI_API_KEY=your_key_here
-
-# 或者在 .env 文件中设置
-echo "OPENAI_API_KEY=your_key_here" >> .env
-```
-
-如果没有 OpenAI API，评估器会自动使用简化指标。
-
-### 问题 5: 文档上传失败
-
-```
-❌ 上传失败: File already exists
-```
-
-**解决方案**:
-
-```bash
-# 清空现有文档
-curl -X POST http://localhost:8000/api/documents/clear
-
-# 或者使用 --skip-upload 跳过上传
-./evaluation/run_evaluation.sh --skip-upload
 ```
 
 ## 📊 结果解读

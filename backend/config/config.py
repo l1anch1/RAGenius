@@ -50,7 +50,7 @@ CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "150"))
 # ============================================
 
 QUERY_EXPANSION_ENABLED = os.getenv("QUERY_EXPANSION_ENABLED", "true").lower() in ("true", "1", "yes")
-QUERY_EXPANSION_N_SUBQUERIES = int(os.getenv("QUERY_EXPANSION_N_SUBQUERIES", "3"))
+QUERY_EXPANSION_N_SUBQUERIES = int(os.getenv("QUERY_EXPANSION_N_SUBQUERIES", "2"))
 QUERY_EXPANSION_MODEL = os.getenv("QUERY_EXPANSION_MODEL", "gpt-4o-mini")
 QUERY_EXPANSION_TEMPERATURE = float(os.getenv("QUERY_EXPANSION_TEMPERATURE", "0.7"))
 QUERY_EXPANSION_INCLUDE_ORIGINAL = os.getenv("QUERY_EXPANSION_INCLUDE_ORIGINAL", "true").lower() in ("true", "1", "yes")
@@ -59,22 +59,22 @@ QUERY_EXPANSION_INCLUDE_ORIGINAL = os.getenv("QUERY_EXPANSION_INCLUDE_ORIGINAL",
 # 检索流水线设置 - Hybrid Retrieval
 # ============================================
 
-HYBRID_TOP_K_PER_QUERY = int(os.getenv("HYBRID_TOP_K_PER_QUERY", "20"))
+HYBRID_TOP_K_PER_QUERY = int(os.getenv("HYBRID_TOP_K_PER_QUERY", "15"))
 
 # ============================================
 # 检索流水线设置 - RRF Fusion
 # ============================================
 
 RRF_K = int(os.getenv("RRF_K", "60"))
-RRF_TOP_K = int(os.getenv("RRF_TOP_K", "15"))
+RRF_TOP_K = int(os.getenv("RRF_TOP_K", "12"))
 
 # ============================================
 # 检索流水线设置 - Reranking
 # ============================================
 
 RERANKING_ENABLED = os.getenv("RERANKING_ENABLED", "true").lower() in ("true", "1", "yes")
-RERANKING_MODEL = os.getenv("RERANKING_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
-RERANKING_TOP_K = int(os.getenv("RERANKING_TOP_K", "10"))
+RERANKING_MODEL = os.getenv("RERANKING_MODEL", "cross-encoder/ms-marco-MiniLM-L-2-v2")
+RERANKING_TOP_K = int(os.getenv("RERANKING_TOP_K", "8"))
 RERANKING_BATCH_SIZE = int(os.getenv("RERANKING_BATCH_SIZE", "32"))
 
 # ============================================

@@ -7,18 +7,19 @@ This directory contains the evaluation framework for the RAGenius RAG system usi
 ```
 evaluation/
 ├── data/
-│   ├── test_dataset.json        # 20 test cases with ground truth
+│   ├── test_dataset.json        # 100 test cases with ground truth
 │   └── sample_docs/              # Sample knowledge base documents
 │       └── rag_basics.md         # RAG fundamentals documentation
 ├── scripts/
-│   ├── evaluate_rag.py           # Full evaluation script (requires API)
-│   └── quick_demo.py             # Quick demo (no API required)
+│   └── evaluate_rag.py           # Full evaluation script with Ragas
 ├── results/
 │   ├── EVALUATION_REPORT.md      # Detailed evaluation report
-│   ├── evaluation_results.svg    # Visualization chart
+│   ├── evaluation_results.svg    # Visualization chart (SVG)
+│   ├── evaluation_results.png    # Visualization chart (PNG)
 │   └── evaluation_report.json    # Machine-readable results
 ├── requirements.txt              # Python dependencies
 ├── run_evaluation.sh             # Quick run script
+├── test_connection.py            # Backend connection test
 └── README.md                     # This file
 ```
 
@@ -52,6 +53,7 @@ python3 evaluation/test_connection.py --backend-url http://your-server:8000
 **Prerequisites:**
 1. Backend must be running (`docker compose up -d`)
 2. Install dependencies: `pip install -r evaluation/requirements.txt`
+3. Python 3.10+ recommended (or install `eval_type_backport` for Python 3.9)
 
 ```bash
 # Evaluate local backend
@@ -65,16 +67,6 @@ python3 evaluation/test_connection.py --backend-url http://your-server:8000
 
 # Or run Python script directly
 python3 evaluation/scripts/evaluate_rag.py --backend-url http://localhost:8000
-```
-
-### Option 4: Run Quick Demo (No Backend Required)
-
-```bash
-# Install minimal dependencies
-pip install matplotlib seaborn pandas
-
-# Run demo (generates visualization only)
-python3 evaluation/scripts/quick_demo.py
 ```
 
 ## 📊 Evaluation Metrics
@@ -103,7 +95,7 @@ We use **Ragas** framework with the following metrics:
 
 ## 📝 Test Dataset
 
-Our evaluation dataset (`data/test_dataset.json`) contains 20 carefully crafted test cases covering:
+Our evaluation dataset (`data/test_dataset.json`) contains **100 carefully crafted test cases** covering:
 
 - **RAG Fundamentals** (5 cases)
   - What is RAG?
@@ -230,7 +222,7 @@ Based on our evaluation results:
 
 ### Long-term Enhancements
 1. **Implement hybrid retrieval**: ✅ Already done (BM25 + Vector)
-2. **Add query expansion**: ✅ Already done (3-query expansion)
+2. **Add query expansion**: ✅ Already done (2-query expansion)
 3. **Fine-tune embeddings**: Consider domain-specific training
 4. **Semantic caching**: Add for common queries
 

@@ -109,7 +109,7 @@ npm run lint
 npm run build
 
 # Docker build test
-docker-compose build
+docker compose build
 ```
 
 #### Submitting Your PR

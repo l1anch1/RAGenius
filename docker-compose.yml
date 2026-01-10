@@ -46,7 +46,7 @@ services:
       # 检索流水线 - Query Expansion
       # ============================================
       - QUERY_EXPANSION_ENABLED=${QUERY_EXPANSION_ENABLED:-true}
-      - QUERY_EXPANSION_N_SUBQUERIES=${QUERY_EXPANSION_N_SUBQUERIES:-3}
+      - QUERY_EXPANSION_N_SUBQUERIES=${QUERY_EXPANSION_N_SUBQUERIES:-2}
       - QUERY_EXPANSION_MODEL=${QUERY_EXPANSION_MODEL:-gpt-4o-mini}
       - QUERY_EXPANSION_TEMPERATURE=${QUERY_EXPANSION_TEMPERATURE:-0.7}
       - QUERY_EXPANSION_INCLUDE_ORIGINAL=${QUERY_EXPANSION_INCLUDE_ORIGINAL:-true}
@@ -54,20 +54,20 @@ services:
       # ============================================
       # 检索流水线 - Hybrid Retrieval
       # ============================================
-      - HYBRID_TOP_K_PER_QUERY=${HYBRID_TOP_K_PER_QUERY:-20}
+      - HYBRID_TOP_K_PER_QUERY=${HYBRID_TOP_K_PER_QUERY:-15}
       
       # ============================================
       # 检索流水线 - RRF Fusion
       # ============================================
       - RRF_K=${RRF_K:-60}
-      - RRF_TOP_K=${RRF_TOP_K:-15}
+      - RRF_TOP_K=${RRF_TOP_K:-12}
       
       # ============================================
       # 检索流水线 - Reranking
       # ============================================
       - RERANKING_ENABLED=${RERANKING_ENABLED:-true}
-      - RERANKING_MODEL=${RERANKING_MODEL:-cross-encoder/ms-marco-MiniLM-L-6-v2}
-      - RERANKING_TOP_K=${RERANKING_TOP_K:-10}
+      - RERANKING_MODEL=${RERANKING_MODEL:-cross-encoder/ms-marco-MiniLM-L-2-v2}
+      - RERANKING_TOP_K=${RERANKING_TOP_K:-8}
       - RERANKING_BATCH_SIZE=${RERANKING_BATCH_SIZE:-32}
       
       # ============================================

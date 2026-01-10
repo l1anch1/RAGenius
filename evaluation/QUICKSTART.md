@@ -1,6 +1,6 @@
 # 🚀 RAG 评估 - 一键运行指南
 
-## 最简单的运行方式（3 步）
+## 最简单的运行方式（4 步）
 
 ### 1️⃣ 启动服务
 ```bash
@@ -8,12 +8,22 @@ cd /Users/lianchi/Documents/CS/RAGenius
 docker compose up -d
 ```
 
-### 2️⃣ 激活环境
+### 2️⃣ 配置 OpenAI API Key（重要！）
+```bash
+# Ragas 需要 OpenAI API 来评估答案质量
+# 在 .env 文件中添加（如果还没有）
+echo "OPENAI_API_KEY=sk-your-openai-key-here" >> .env
+
+# 或者使用现有的 LLM key
+export OPENAI_API_KEY=$(grep LLM_OPENAI_API_KEY .env | cut -d '=' -f2)
+```
+
+### 3️⃣ 激活环境
 ```bash
 conda activate ragenius
 ```
 
-### 3️⃣ 运行评估
+### 4️⃣ 运行评估
 ```bash
 ./evaluation/run_evaluation.sh
 ```
