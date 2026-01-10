@@ -92,14 +92,80 @@ class ChromaVectorStoreManager(VectorStoreInterface):
         """
         self.embedding_interface = embedding_interface
         
-        # 使用内存存储，不持久化
+        # 初始化状态变量
         self._vector_store = None
         self._vectorized_documents = []
         self._total_chunks = 0
         self._last_build_time = None
         
         self._lock = threading.RLock()
-        logger.info("ChromaVectorStoreManager initialized (memory-only mode)")
+        
+        # 启动时尝试加载持久化数据
+        self._load_persistent_store()
+        
+        mode = "persistent" if self._vector_store else "memory-only"
+        logger.info(f"ChromaVectorStoreManager initialized ({mode} mode)")
+    
+    def _load_persistent_store(self):
+        """启动时加载持久化的向量存储（如果存在）"""
+        persist_dir = os.getenv("CHROMA_PERSIST_DIR", "")
+        if not persist_dir or not os.path.exists(persist_dir):
+            return
+        
+        try:
+            # 检查目录是否有有效的 ChromaDB 数据
+            chroma_files = os.listdir(persist_dir)
+            if not chroma_files:
+                logger.info(f"Persistent directory exists but is empty: {persist_dir}")
+                return
+            
+            logger.info(f"Loading persistent ChromaDB from: {persist_dir}")
+            
+            # 获取嵌入模型
+            embedding_model = self.embedding_interface.get_embeddings()
+            if not embedding_model:
+                logger.warning("Embedding model not available, cannot load persistent store")
+                return
+            
+            # 加载持久化的向量存储
+            self._vector_store = Chroma(
+                persist_directory=persist_dir,
+                embedding_function=embedding_model,
+                collection_name="documents"
+            )
+            
+            # 尝试获取文档数量
+            try:
+                collection = self._vector_store._collection
+                count = collection.count()
+                self._total_chunks = count
+                
+                # 尝试恢复文档列表
+                if count > 0:
+                    # 从 collection 中获取所有 metadata
+                    results = collection.get(include=["metadatas"])
+                    document_set = set()
+                    for metadata in results.get("metadatas", []):
+                        if metadata and "source" in metadata:
+                            filename = os.path.basename(metadata["source"])
+                            if filename:
+                                document_set.add(filename)
+                    self._vectorized_documents = sorted(list(document_set))
+                
+                logger.info(f"Loaded persistent store: {self._total_chunks} chunks, {len(self._vectorized_documents)} documents")
+                
+            except Exception as e:
+                logger.warning(f"Could not get collection info: {e}")
+                
+        except Exception as e:
+            logger.error(f"Failed to load persistent store: {e}")
+            # 如果加载失败，清理可能损坏的数据
+            import shutil
+            try:
+                shutil.rmtree(persist_dir)
+                logger.info(f"Cleaned up corrupted persistent data: {persist_dir}")
+            except Exception:
+                pass
     
     def get_store(self) -> Optional[Chroma]:
         """获取向量存储实例"""
@@ -107,7 +173,7 @@ class ChromaVectorStoreManager(VectorStoreInterface):
             return self._vector_store
     
     def clear_store(self) -> bool:
-        """清空向量存储和所有元数据
+        """清空向量存储和所有元数据（包括持久化数据）
         
         Returns:
             清空是否成功
@@ -115,6 +181,16 @@ class ChromaVectorStoreManager(VectorStoreInterface):
         try:
             with self._lock:
                 logger.info("Clearing vector store and metadata...")
+                
+                # 如果有持久化目录，删除它
+                persist_dir = os.getenv("CHROMA_PERSIST_DIR", "")
+                if persist_dir and os.path.exists(persist_dir):
+                    import shutil
+                    try:
+                        shutil.rmtree(persist_dir)
+                        logger.info(f"Deleted persistent ChromaDB directory: {persist_dir}")
+                    except Exception as e:
+                        logger.error(f"Failed to delete persistent directory: {e}")
                 
                 # 清空向量存储
                 self._vector_store = None
@@ -212,8 +288,15 @@ class ChromaVectorStoreManager(VectorStoreInterface):
                 persist_dir = os.getenv("CHROMA_PERSIST_DIR", "")
                 
                 if persist_dir:
-                    # 持久化模式
+                    # 持久化模式 - 先删除旧数据再创建新的
                     logger.info(f"Using persistent mode with directory: {persist_dir}")
+                    
+                    # 删除旧的持久化数据，确保干净重建
+                    if os.path.exists(persist_dir):
+                        import shutil
+                        shutil.rmtree(persist_dir)
+                        logger.info(f"Deleted old persistent data at: {persist_dir}")
+                    
                     os.makedirs(persist_dir, exist_ok=True)
                     self._vector_store = Chroma.from_documents(
                         documents=chunks,

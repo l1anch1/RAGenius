@@ -325,7 +325,7 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 	};
 
 	return (
-		<div className="min-h-screen flex flex-col relative">
+		<div className="h-screen flex flex-col relative overflow-hidden">
 			{/* 背景效果 */}
 			<div className="bg-pattern">
 				<div className="grid-overlay"></div>
@@ -339,8 +339,8 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 				</div>
 			)}
 
-			{/* 顶部导航栏 - 固定在顶部 */}
-			<header className="sticky top-0 z-30 flex-shrink-0 px-6 py-4 bg-[--bg-primary]/80 backdrop-blur-xl">
+			{/* 顶部导航栏 */}
+			<header className="relative z-20 flex-shrink-0 px-6 py-4 bg-[--bg-primary]/95 backdrop-blur-sm">
 				<div className="max-w-5xl mx-auto flex items-center justify-between">
 					{/* Logo */}
 					<div className="flex items-center gap-4">
@@ -423,7 +423,7 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 			</header>
 
 			{/* 消息区域 */}
-			<main className="relative z-10 flex-1 px-6 pb-4 pt-20">
+			<main className="relative z-10 flex-1 overflow-y-auto custom-scrollbar px-6 pb-4">
 				<div className="max-w-4xl mx-auto space-y-6">
 					{/* 欢迎界面 */}
 						{chatHistory.length === 0 && !currentQuestion && !results && !loading && (
@@ -558,8 +558,8 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 				</div>
 			</main>
 
-			{/* 输入区域 - 固定在底部 */}
-			<footer className="sticky bottom-0 z-30 flex-shrink-0 px-6 py-5 bg-gradient-to-t from-[--bg-primary] via-[--bg-primary] to-transparent">
+			{/* 输入区域 */}
+			<footer className="relative z-20 flex-shrink-0 px-6 py-4 bg-[--bg-primary]/95 backdrop-blur-sm">
 				<div className="max-w-4xl mx-auto">
 					<div className="glass-card-strong p-3">
 						<div className="relative flex items-center">
