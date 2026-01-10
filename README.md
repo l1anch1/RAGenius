@@ -10,7 +10,7 @@
 A sophisticated QA system architected on Langchain's robust framework and powered by DeepSeek's local models and OpenAI API. Leveraging Retrieval Augmented Generation (RAG) methodology, this platform seamlessly integrates proprietary domain knowledge with generative AI capabilities, delivering high accuracy and contextual relevance in specialized information retrieval scenarios.
 <br>
 
-![demo](frontend/public/images/img1.png)
+![demo](frontend/public/images/img2.png)
 
 
 # Features

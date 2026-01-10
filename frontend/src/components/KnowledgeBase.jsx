@@ -1,4 +1,5 @@
-// src/components/KnowledgeBase.jsx
+// RAGenius - Modern Silicon Valley UI
+// KnowledgeBase.jsx - 知识库主组件
 import React, { useEffect, useState } from 'react';
 import IntegratedTab from './IntegratedTab';
 
@@ -25,8 +26,7 @@ const KnowledgeBase = () => {
 	};
 
 	return (
-		<div className="h-screen w-full overflow-hidden">
-			{/* 主界面 */}
+		<div className="h-screen w-full overflow-hidden bg-[--bg-primary]">
 			<IntegratedTab isInitialized={isInitialized} refreshSystemInfo={fetchSystemInfo} />
 		</div>
 	);

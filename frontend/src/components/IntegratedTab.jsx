@@ -1,4 +1,5 @@
-// React Component (IntegratedTab.jsx) - 整合查询和文档管理功能
+// RAGenius - Modern Light Silicon Valley UI
+// IntegratedTab.jsx - 聊天界面组件
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -11,10 +12,10 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 	const [sources, setSources] = useState([]);
 	const [queryError, setQueryError] = useState('');
 	const resultsRef = useRef(null);
+	const messagesEndRef = useRef(null);
 	
 	// 对话历史状态
 	const [chatHistory, setChatHistory] = useState([]);
-	// 当前问题（用于显示正在进行的对话）
 	const [currentQuestion, setCurrentQuestion] = useState('');
 
 	// 文档管理相关状态
@@ -23,50 +24,41 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 	const [documentsLoading, setDocumentsLoading] = useState(false);
 	const [successMessage, setSuccessMessage] = useState('');
 	const [errorMessage, setErrorMessage] = useState('');
-	const [messageSource, setMessageSource] = useState(''); // 'upload' 或 'rebuild'
 	const [isRebuilding, setIsRebuilding] = useState(false);
 	const [showSourcesModal, setShowSourcesModal] = useState(false);
 	const [uploading, setUploading] = useState(false);
+	const [sidebarOpen, setSidebarOpen] = useState(false);
 	const fileInputRef = useRef(null);
 	
-	// 文档预览相关状态
-	const [previewDoc, setPreviewDoc] = useState(null);
-	const [previewData, setPreviewData] = useState(null);
-	const [previewLoading, setPreviewLoading] = useState(false);
-	const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
-	const previewTimeoutRef = useRef(null);
+	// 自动滚动到底部
+	const scrollToBottom = () => {
+		messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+	};
 
-	// 自动清除成功消息
 	useEffect(() => {
-		if (successMessage) {
+		scrollToBottom();
+	}, [chatHistory, results, currentQuestion]);
+
+	// 自动清除消息
+	useEffect(() => {
+		if (successMessage || errorMessage) {
 			const timer = setTimeout(() => {
 				setSuccessMessage('');
-			}, 3000); // 3秒后自动消失
-
+				setErrorMessage('');
+			}, 4000);
 			return () => clearTimeout(timer);
 		}
-	}, [successMessage]);
+	}, [successMessage, errorMessage]);
 
-	useEffect(() => {
-		// 滚动到 answer-box 底部
-		if (results && resultsRef.current) {
-			resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-		}
-	}, [results]);
-
-	// 获取所有文档列表
+	// 获取文档列表
 	const fetchDocuments = async () => {
 		setDocumentsLoading(true);
 		try {
 			const response = await fetch('/api/documents');
 			const data = await response.json();
-
 			if (data.status === 'success') {
-				// 去重：确保文档列表中没有重复项
 				const uniqueDocuments = Array.from(new Set(data.documents || []));
 				setDocuments(uniqueDocuments);
-			} else {
-				console.error('Failed to get document list:', data.message);
 			}
 		} catch (error) {
 			console.error('Failed to get document list:', error);
@@ -75,7 +67,7 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 		}
 	};
 
-	// 获取已向量化的文档列表
+	// 获取已向量化的文档
 	const fetchVectorizedDocuments = async () => {
 		try {
 			const response = await fetch('/api/documents/vectorized');
@@ -87,82 +79,6 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 			console.error('Failed to fetch vectorized documents:', error);
 		}
 	};
-	
-	// 获取文档预览
-	const fetchDocumentPreview = async (filename) => {
-		setPreviewLoading(true);
-		try {
-			const encodedFilename = encodeURIComponent(filename);
-			const response = await fetch(`/api/documents/preview/${encodedFilename}?max_length=500`);
-			const data = await response.json();
-			
-			if (data.status === 'success') {
-				setPreviewData(data);
-			} else {
-				setPreviewData({
-					status: 'error',
-					preview: '无法加载预览'
-				});
-			}
-		} catch (error) {
-			console.error('Failed to fetch document preview:', error);
-			setPreviewData({
-				status: 'error',
-				preview: '加载预览失败'
-			});
-		} finally {
-			setPreviewLoading(false);
-		}
-	};
-	
-	// 处理鼠标悬停
-	const handleMouseEnter = (doc, event) => {
-		// 清除之前的定时器
-		if (previewTimeoutRef.current) {
-			clearTimeout(previewTimeoutRef.current);
-		}
-		
-		// 获取鼠标位置 - 在元素左侧显示预览
-		const rect = event.currentTarget.getBoundingClientRect();
-		const previewWidth = 280;
-		setPreviewPosition({
-			x: rect.left - previewWidth - 15, // 在元素左侧显示，留15px间距
-			y: rect.top
-		});
-		
-		// 延迟500ms后显示预览
-		previewTimeoutRef.current = setTimeout(() => {
-			setPreviewDoc(doc);
-			fetchDocumentPreview(doc);
-		}, 500);
-	};
-	
-	// 处理鼠标移动
-	const handleMouseMove = (event) => {
-		if (previewDoc) {
-			// 如果预览已经显示，不更新位置，避免抖动
-			return;
-		}
-		// 实时更新鼠标位置
-		const rect = event.currentTarget.getBoundingClientRect();
-		const previewWidth = 280;
-		setPreviewPosition({
-			x: rect.left - previewWidth - 15,
-			y: rect.top
-		});
-	};
-	
-	// 处理鼠标离开
-	const handleMouseLeave = () => {
-		// 清除定时器
-		if (previewTimeoutRef.current) {
-			clearTimeout(previewTimeoutRef.current);
-		}
-		
-		// 立即关闭预览
-		setPreviewDoc(null);
-		setPreviewData(null);
-	};
 
 	// 上传文件
 	const handleFileUpload = async (event) => {
@@ -172,7 +88,6 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 		setUploading(true);
 		setSuccessMessage('');
 		setErrorMessage('');
-		setMessageSource('upload');
 
 		try {
 			const formData = new FormData();
@@ -186,83 +101,62 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 			const data = await response.json();
 
 			if (data.status === 'success') {
-				setSuccessMessage(data.message);
-				setMessageSource('upload');
-				fetchDocuments(); // 刷新文档列表
-				// 重置文件输入
+				setSuccessMessage(`✨ ${file.name} uploaded successfully`);
+				fetchDocuments();
 				if (fileInputRef.current) {
 					fileInputRef.current.value = '';
 				}
 			} else {
 				setErrorMessage(data.message);
-				setMessageSource('upload');
 			}
 		} catch (error) {
-			console.error('Failed to upload file:', error);
-			setErrorMessage('Failed to upload file, please check network connection.');
-			setMessageSource('upload');
+			setErrorMessage('Upload failed. Please check your network connection.');
 		} finally {
 			setUploading(false);
 		}
 	};
 
-	// 删除单个文档
+	// 删除文档
 	const deleteDocument = async (filename) => {
-		if (!confirm(`确定要删除 "${filename}" 吗？`)) {
-			return;
-		}
+		if (!confirm(`Are you sure you want to delete "${filename}"?`)) return;
 
 		try {
 			const response = await fetch('/api/documents/delete', {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
+				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ filename }),
 			});
 			const data = await response.json();
 
 			if (data.status === 'success') {
-				setSuccessMessage(data.message);
-				setMessageSource('upload');
-				fetchDocuments(); // 刷新文档列表
+				setSuccessMessage('Document deleted');
+				fetchDocuments();
 			} else {
 				setErrorMessage(data.message);
-				setMessageSource('upload');
 			}
 		} catch (error) {
-			console.error('Failed to delete document:', error);
-			setErrorMessage('删除文件失败，请检查网络连接。');
-			setMessageSource('upload');
+			setErrorMessage('Delete failed');
 		}
 	};
 
 	// 清空所有文档
 	const clearAllDocuments = async () => {
-		if (!confirm('确定要清空所有文档吗？这将删除所有上传的文件和知识库数据！')) {
-			return;
-		}
+		if (!confirm('Are you sure you want to clear all documents?')) return;
 
 		try {
-			const response = await fetch('/api/documents/clear', {
-				method: 'POST',
-			});
+			const response = await fetch('/api/documents/clear', { method: 'POST' });
 			const data = await response.json();
 
 			if (data.status === 'success') {
-				setSuccessMessage(data.message);
-				setMessageSource('upload');
+				setSuccessMessage('All documents cleared');
 				fetchDocuments();
 				fetchVectorizedDocuments();
 				refreshSystemInfo();
 			} else {
 				setErrorMessage(data.message);
-				setMessageSource('upload');
 			}
 		} catch (error) {
-			console.error('Failed to clear documents:', error);
-			setErrorMessage('清空文档失败，请检查网络连接。');
-			setMessageSource('upload');
+			setErrorMessage('Clear failed');
 		}
 	};
 
@@ -271,34 +165,23 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 		setIsRebuilding(true);
 		setSuccessMessage('');
 		setErrorMessage('');
-		setMessageSource('rebuild');
 
 		try {
-			const response = await fetch('/api/rebuild', {
-				method: 'POST',
-			});
+			const response = await fetch('/api/rebuild', { method: 'POST' });
 			const data = await response.json();
 
-			// 无论成功还是失败，都刷新文档列表，确保显示与后端一致
 			fetchDocuments();
 			fetchVectorizedDocuments();
 			
 			if (data.status === 'success') {
-				setSuccessMessage(data.message);
-				setMessageSource('rebuild');
+				setSuccessMessage('🚀 Knowledge base rebuilt successfully');
 				refreshSystemInfo();
-				
-				// 触发自定义事件通知其他组件
 				window.dispatchEvent(new CustomEvent('knowledgeBaseRebuilt'));
 			} else {
 				setErrorMessage(data.message);
-				setMessageSource('rebuild');
 			}
 		} catch (error) {
-			console.error('Failed to rebuild knowledge base:', error);
-			setErrorMessage('Failed to rebuild knowledge base, please check network connection.');
-			setMessageSource('rebuild');
-			// 即使出错也刷新文档列表
+			setErrorMessage('Rebuild failed');
 			fetchDocuments();
 			fetchVectorizedDocuments();
 		} finally {
@@ -308,33 +191,28 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 
 	// 发送查询
 	const sendStreamQuery = async () => {
-		if (!queryInput) return;
+		if (!queryInput.trim()) return;
 
 		const currentQuery = queryInput;
-		setCurrentQuestion(currentQuery); // 保存当前问题
+		setCurrentQuestion(currentQuery);
 		setLoading(true);
 		setResults('');
 		setSources([]);
 		setQueryError('');
 
-		// 用于累积完整的回答
 		let fullAnswer = '';
 
 		try {
 			const response = await fetch('/api/query/stream', {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
+				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ 
 					query: currentQuery,
 					chat_history: chatHistory
 				}),
 			});
 
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
-			}
+			if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
 			const reader = response.body.getReader();
 			const decoder = new TextDecoder('utf-8');
@@ -360,7 +238,7 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 							switch (event.type) {
 								case 'token':
 									fullAnswer += event.token;
-									setResults(prevResults => prevResults + event.token);
+									setResults(prev => prev + event.token);
 									break;
 								case 'sources':
 									setSources(event.sources);
@@ -370,40 +248,34 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 									setLoading(false);
 									break;
 								case 'end':
-									// 查询完成，保存到对话历史
 									if (fullAnswer.trim()) {
-										setChatHistory(prevHistory => {
-											const newHistory = [...prevHistory, {
+										setChatHistory(prev => {
+											const newHistory = [...prev, {
 												question: currentQuery,
 												answer: fullAnswer
 											}];
-											// 限制历史记录数量（最多保留10轮对话）
 											return newHistory.slice(-10);
 										});
 									}
 									setQueryInput('');
-									setCurrentQuestion(''); // 清除当前问题
+									setCurrentQuestion('');
 									setLoading(false);
 									break;
-								default:
-									console.warn('Unknown event type:', event.type);
 							}
 						} catch (parseError) {
-							console.error('Failed to parse JSON:', jsonData, parseError);
-							setQueryError(`Error parsing server response: ${parseError.message}`);
+							console.error('Failed to parse JSON:', parseError);
 						}
 					}
 				}
 			}
 		} catch (networkError) {
-			console.error('Network error:', networkError);
 			setQueryError(`Network error: ${networkError.message}`);
 		} finally {
 			setLoading(false);
 		}
 	};
 
-	// 组件挂载时获取数据
+	// 组件挂载
 	useEffect(() => {
 		if (isInitialized) {
 			fetchDocuments();
@@ -411,36 +283,97 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 		}
 	}, [isInitialized]);
 
-	// 监听重建事件
-	useEffect(() => {
-		if (!isInitialized) return;
+	// Markdown 组件配置
+	const markdownComponents = {
+		p: ({ children }) => <p className="mb-3 leading-relaxed text-[--text-secondary]">{children}</p>,
+		h1: ({ children }) => <h1 className="text-xl font-bold mb-4 mt-6 text-[--text-primary]">{children}</h1>,
+		h2: ({ children }) => <h2 className="text-lg font-semibold mb-3 mt-5 text-[--text-primary]">{children}</h2>,
+		h3: ({ children }) => <h3 className="text-base font-medium mb-2 mt-4 text-[--text-primary]">{children}</h3>,
+		ul: ({ children }) => <ul className="list-disc list-inside mb-3 space-y-1 ml-2">{children}</ul>,
+		ol: ({ children }) => <ol className="list-decimal list-inside mb-3 space-y-1 ml-2">{children}</ol>,
+		li: ({ children }) => <li className="text-[--text-secondary] leading-relaxed">{children}</li>,
+		blockquote: ({ children }) => (
+			<blockquote className="border-l-4 border-[--accent-mid] pl-4 py-2 my-3 bg-[--soft-purple] rounded-r-xl italic text-[--text-secondary]">
+				{children}
+			</blockquote>
+		),
+		strong: ({ children }) => <strong className="font-bold text-[--text-primary]">{children}</strong>,
+		hr: () => <hr className="my-6 border-[--border-color]" />,
+		table: ({ children }) => (
+			<div className="overflow-x-auto my-4">
+				<table className="w-full border-collapse text-sm border border-[--border-color] rounded-xl overflow-hidden">{children}</table>
+			</div>
+		),
+		thead: ({ children }) => <thead className="bg-[--bg-tertiary]">{children}</thead>,
+		th: ({ children }) => <th className="border border-[--border-color] px-4 py-3 text-left font-semibold text-[--text-primary]">{children}</th>,
+		td: ({ children }) => <td className="border border-[--border-color] px-4 py-3 text-[--text-secondary]">{children}</td>,
+		pre: ({ children }) => (
+			<pre className="bg-[--bg-tertiary] border border-[--border-color] rounded-xl p-4 overflow-x-auto my-4 text-sm">
+				{children}
+			</pre>
+		),
+	};
 
-		const handleRebuildComplete = () => {
-			fetchVectorizedDocuments();
-		};
-
-		window.addEventListener('knowledgeBaseRebuilt', handleRebuildComplete);
-		return () => {
-			window.removeEventListener('knowledgeBaseRebuilt', handleRebuildComplete);
-		};
-	}, [isInitialized]);
+	// 获取文档图标
+	const getDocIcon = (filename) => {
+		if (filename.endsWith('.pdf')) return '📕';
+		if (filename.endsWith('.txt')) return '📄';
+		if (filename.endsWith('.md')) return '📝';
+		if (filename.endsWith('.csv')) return '📊';
+		if (filename.endsWith('.docx') || filename.endsWith('.doc')) return '📘';
+		return '📄';
+	};
 
 	return (
-		<div className="h-screen bg-gray-50 flex flex-col">
-			{/* 顶部状态栏 - 紧凑设计 */}
-			<div className="flex-shrink-0 border-b border-gray-200 bg-white px-12 py-3">
-				<div className="w-full">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center space-x-3">
-							<div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-								<span className="text-white text-base font-bold">AI</span>
+		<div className="min-h-screen flex flex-col relative">
+			{/* 背景效果 */}
+			<div className="bg-pattern">
+				<div className="grid-overlay"></div>
+				<div className="floating-shapes"></div>
+			</div>
+
+			{/* Toast 通知 */}
+			{(successMessage || errorMessage) && (
+				<div className={`toast ${successMessage ? 'toast-success' : 'toast-error'}`}>
+					<span>{successMessage || errorMessage}</span>
+				</div>
+			)}
+
+			{/* 顶部导航栏 - 固定在顶部 */}
+			<header className="sticky top-0 z-30 flex-shrink-0 px-6 py-4 bg-[--bg-primary]/80 backdrop-blur-xl">
+				<div className="max-w-5xl mx-auto flex items-center justify-between">
+					{/* Logo */}
+					<div className="flex items-center gap-4">
+						<div className="logo-container">
+							<div className="logo-glow"></div>
+							<div className="relative w-12 h-12 rounded-[14px] bg-gradient-to-br from-[--accent-start] via-[--accent-mid] to-[--accent-end] flex items-center justify-center shadow-lg">
+								<svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+								</svg>
+							</div>
 							</div>
 							<div>
-								<h1 className="text-lg font-semibold text-gray-900">RAGenius</h1>
-							</div>
+							<h1 className="text-xl font-bold gradient-text">RAGenius</h1>
+							<p className="text-xs text-[--text-tertiary] font-medium">AI-Powered Knowledge</p>
 						</div>
-						<div className="flex items-center space-x-3 text-sm text-gray-500">
-							<span>{vectorizedDocuments.length}/{documents.length} 文档</span>
+					</div>
+
+					{/* 右侧操作区 */}
+					<div className="flex items-center gap-3">
+						{/* 状态徽章 */}
+						{vectorizedDocuments.length > 0 ? (
+							<div className="badge badge-success">
+								<div className="w-2 h-2 rounded-full bg-[--accent-green] animate-pulse"></div>
+								<span>{vectorizedDocuments.length} docs ready</span>
+							</div>
+						) : (
+							<div className="badge badge-warning">
+								<div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+								<span>Not initialized</span>
+						</div>
+						)}
+
+						{/* 清除对话 */}
 							{chatHistory.length > 0 && (
 								<button
 									onClick={() => {
@@ -450,131 +383,103 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 										setCurrentQuestion('');
 										setQueryError('');
 									}}
-									className="w-10 h-10 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors flex items-center justify-center cursor-pointer"
-									title="清除对话历史"
+								className="btn-icon"
+								title="Clear chat"
 								>
-									<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
 									</svg>
 								</button>
 							)}
-							{/* 文件管理按钮 */}
+
+						{/* 文档管理 */}
 							<button
-								onClick={() => {
-									document.getElementById('sidebar').classList.remove('translate-x-full');
-								}}
-								className="w-10 h-10 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors flex items-center justify-center cursor-pointer"
-								title="打开文档管理"
-							>
-								<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+							onClick={() => setSidebarOpen(true)}
+							className="btn-icon"
+							title="Documents"
+						>
+							<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z" />
 								</svg>
 							</button>
+
 							{/* 重建按钮 */}
 							<button
 								onClick={rebuildKnowledgeBase}
 								disabled={isRebuilding}
-								className="w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-sm hover:shadow-md"
-								title={isRebuilding ? '重建中' : '重建知识库'}
+							className="btn-icon btn-icon-glow"
+							title={isRebuilding ? 'Rebuilding...' : 'Rebuild knowledge base'}
 							>
 								{isRebuilding ? (
-									<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+								<div className="spinner"></div>
 								) : (
-									<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 									</svg>
 								)}
 							</button>
 						</div>
 					</div>
-				</div>
-			</div>
+			</header>
 
-			{/* 消息区域 - 使用calc确保准确的高度计算 */}
-			<div className="flex-1 overflow-y-auto" style={{height: 'calc(100vh - 120px)'}}>
-				<div className="max-w-5xl mx-auto px-6 py-4 space-y-4">
-						{/* 欢迎消息 - 只在没有任何对话时显示 */}
+			{/* 消息区域 */}
+			<main className="relative z-10 flex-1 px-6 pb-4 pt-20">
+				<div className="max-w-4xl mx-auto space-y-6">
+					{/* 欢迎界面 */}
 						{chatHistory.length === 0 && !currentQuestion && !results && !loading && (
-							<div className="text-center py-8">
-								<div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-3">
-									<span className="text-white text-lg">🤖</span>
+						<div className="flex flex-col items-center justify-center min-h-[45vh] text-center animate-fade-in-up">
+							<div className="welcome-icon mb-8 animate-float">
+								<svg className="w-12 h-12 text-white relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+								</svg>
 								</div>
-								<h2 className="text-lg font-semibold text-gray-900 mb-2">你好！我是 RAGenius</h2>
-								<p className="text-sm text-gray-500 mb-4">我可以帮你查询知识库中的信息</p>
-								
-								{/* 知识库状态 - 简化版 */}
-								{vectorizedDocuments.length > 0 ? (
-									<div className="inline-flex items-center px-3 py-1 bg-green-50 text-green-700 text-xs rounded-full">
-										<div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-										已加载 {vectorizedDocuments.length} 个文档
+							<h2 className="text-4xl font-extrabold mb-4 gradient-text">Hi, I'm RAGenius</h2>
+							<p className="text-[--text-secondary] text-lg mb-10 max-w-lg leading-relaxed">
+								Intelligent Q&A powered by your document knowledge base
+							</p>
+							
+							{/* 功能提示卡片 */}
+							<div className="flex flex-wrap justify-center gap-5 max-w-3xl">
+								{[
+									{ icon: '📄', title: 'Upload Documents', desc: 'Supports PDF, TXT, MD and more', color: 'purple' },
+									{ icon: '🔍', title: 'Smart Retrieval', desc: 'Semantic + keyword hybrid search', color: 'blue' },
+									{ icon: '💬', title: 'Chat Q&A', desc: 'Multi-turn dialogue with context', color: 'pink' }
+								].map((item, i) => (
+									<div 
+										key={i} 
+										className="feature-card flex-1 min-w-[200px] max-w-[240px]"
+										style={{ animationDelay: `${i * 0.1}s` }}
+									>
+										<div className="feature-card-icon">{item.icon}</div>
+										<h3 className="font-bold text-[--text-primary] mb-2 text-lg">{item.title}</h3>
+										<p className="text-sm text-[--text-tertiary] leading-relaxed">{item.desc}</p>
 									</div>
-								) : (
-									<div className="inline-flex items-center px-3 py-1 bg-yellow-50 text-yellow-700 text-xs rounded-full">
-										<div className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
-										知识库未初始化
+								))}
 									</div>
-								)}
 							</div>
 						)}
 
-						{/* 显示所有历史对话 */}
+					{/* 对话历史 */}
 						{chatHistory.map((turn, index) => (
-							<div key={index} className="space-y-3">
-								{/* 用户问题 */}
-								<div className="flex items-start space-x-2 justify-end">
-									<div className="flex-1 max-w-[80%] bg-blue-50 rounded-lg px-4 py-3 shadow-sm border border-blue-200">
-										<p className="text-gray-900 leading-relaxed">{turn.question}</p>
+						<div key={index} className="space-y-5 animate-fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
+							{/* 用户消息 */}
+							<div className="flex justify-end gap-3">
+								<div className="message-user">
+									<p className="leading-relaxed">{turn.question}</p>
 									</div>
-									<div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-										<span className="text-white text-xs font-bold">你</span>
+								<div className="avatar-user">U</div>
 									</div>
-								</div>
 
-								{/* AI回答 */}
-								<div className="flex items-start space-x-2">
-									<div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-										<span className="text-white text-xs font-bold">AI</span>
-									</div>
-									<div className="flex-1 bg-white rounded-lg px-3 py-3 shadow-sm border border-gray-200">
-										<div className="text-gray-800 leading-relaxed">
-											<ReactMarkdown 
-												remarkPlugins={[remarkGfm]}
-												components={{
-													p: ({children}) => <p className="mb-3 leading-relaxed text-gray-800">{children}</p>,
-													h1: ({children}) => <h1 className="text-xl font-bold mb-4 text-gray-900 border-b border-gray-200 pb-2">{children}</h1>,
-													h2: ({children}) => <h2 className="text-lg font-semibold mb-3 text-gray-900">{children}</h2>,
-													h3: ({children}) => <h3 className="text-base font-medium mb-2 text-gray-900">{children}</h3>,
-													h4: ({children}) => <h4 className="text-sm font-medium mb-2 text-gray-700">{children}</h4>,
-													ul: ({children}) => <ul className="list-disc list-inside mb-3 space-y-1 text-gray-800 ml-4">{children}</ul>,
-													ol: ({children}) => <ol className="list-decimal list-inside mb-3 space-y-1 text-gray-800 ml-4">{children}</ol>,
-													li: ({children}) => <li className="text-gray-800 leading-relaxed">{children}</li>,
-													blockquote: ({children}) => (
-														<blockquote className="border-l-4 border-blue-400 pl-4 py-2 mb-3 bg-blue-50 italic text-gray-700 rounded-r">
-															{children}
-														</blockquote>
-													),
-													strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
-													em: ({children}) => <em className="italic text-gray-700">{children}</em>,
-													hr: () => <hr className="my-4 border-gray-300" />,
-													table: ({children}) => (
-														<div className="overflow-x-auto mb-3">
-															<table className="w-full border-collapse border border-gray-300 text-sm">
-																{children}
-															</table>
-														</div>
-													),
-													thead: ({children}) => <thead className="bg-gray-100">{children}</thead>,
-													tbody: ({children}) => <tbody>{children}</tbody>,
-													tr: ({children}) => <tr className="border-b border-gray-200">{children}</tr>,
-													th: ({children}) => <th className="border border-gray-300 px-3 py-2 text-left font-semibold text-gray-900">{children}</th>,
-													td: ({children}) => <td className="border border-gray-300 px-3 py-2 text-gray-800">{children}</td>,
-													pre: ({children}) => (
-														<pre className="bg-gray-100 p-4 rounded-lg overflow-x-auto mb-3 border border-gray-200">
-															{children}
-														</pre>
-													),
-												}}
-											>
+							{/* AI 回复 */}
+							<div className="flex gap-3">
+								<div className="avatar-ai">
+									<svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+									</svg>
+								</div>
+								<div className="message-ai flex-1">
+									<div className="markdown-content">
+										<ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
 												{turn.answer}
 											</ReactMarkdown>
 										</div>
@@ -583,423 +488,278 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 							</div>
 						))}
 
-						{/* 查询错误 */}
-						{queryError && (
-							<div className="flex items-start space-x-2">
-								<div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
-									<span className="text-white text-xs">⚠</span>
+					{/* 当前对话 */}
+					{currentQuestion && (
+						<div className="space-y-5 animate-fade-in-up">
+							{/* 用户问题 */}
+							<div className="flex justify-end gap-3">
+								<div className="message-user">
+									<p className="leading-relaxed">{currentQuestion}</p>
 								</div>
-								<div className="flex-1 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-									<p className="text-red-700 text-sm">{queryError}</p>
-								</div>
+								<div className="avatar-user">U</div>
 							</div>
-						)}
 
-						{/* 当前正在进行的对话 */}
-						{currentQuestion && (
-							<div className="space-y-3">
-								{/* 用户问题 */}
-								<div className="flex items-start space-x-2 justify-end">
-									<div className="flex-1 max-w-[80%] bg-blue-50 rounded-lg px-4 py-3 shadow-sm border border-blue-200">
-										<p className="text-gray-900 leading-relaxed">{currentQuestion}</p>
-									</div>
-									<div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-										<span className="text-white text-xs font-bold">你</span>
-									</div>
+							{/* AI 回复 */}
+							<div className="flex gap-3">
+								<div className="avatar-ai">
+									<svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+									</svg>
 								</div>
-
-								{/* 加载状态 - 显示在用户问题下方 */}
-								{loading && !results && (
-									<div className="flex items-start space-x-2">
-										<div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-											<span className="text-white text-xs font-bold">AI</span>
+								<div className="message-ai flex-1">
+									{loading && !results ? (
+										<div className="loading-dots py-2">
+											<div className="loading-dot"></div>
+											<div className="loading-dot"></div>
+											<div className="loading-dot"></div>
 										</div>
-										<div className="flex-1 bg-white rounded-lg px-3 py-2 shadow-sm border border-gray-200">
-											<div className="flex items-center space-x-1">
-												<div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-												<div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
-												<div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
-											</div>
+									) : (
+										<div className="markdown-content" ref={resultsRef}>
+											<ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+												{results}
+											</ReactMarkdown>
 										</div>
-									</div>
-								)}
-
-								{/* AI回复（正在生成） */}
-								{results && (
-									<>
-										<div className="flex items-start space-x-2">
-											<div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-												<span className="text-white text-xs font-bold">AI</span>
-											</div>
-											<div className="flex-1 bg-white rounded-lg px-3 py-3 shadow-sm border border-gray-200" ref={resultsRef}>
-												<div className="text-gray-800 leading-relaxed">
-													{results && (
-														<ReactMarkdown 
-															remarkPlugins={[remarkGfm]}
-															components={{
-																p: ({children}) => <p className="mb-3 leading-relaxed text-gray-800">{children}</p>,
-																h1: ({children}) => <h1 className="text-xl font-bold mb-4 text-gray-900 border-b border-gray-200 pb-2">{children}</h1>,
-																h2: ({children}) => <h2 className="text-lg font-semibold mb-3 text-gray-900">{children}</h2>,
-																h3: ({children}) => <h3 className="text-base font-medium mb-2 text-gray-900">{children}</h3>,
-																h4: ({children}) => <h4 className="text-sm font-medium mb-2 text-gray-700">{children}</h4>,
-																ul: ({children}) => <ul className="list-disc list-inside mb-3 space-y-1 text-gray-800 ml-4">{children}</ul>,
-																ol: ({children}) => <ol className="list-decimal list-inside mb-3 space-y-1 text-gray-800 ml-4">{children}</ol>,
-																li: ({children}) => <li className="text-gray-800 leading-relaxed">{children}</li>,
-																blockquote: ({children}) => (
-																	<blockquote className="border-l-4 border-blue-400 pl-4 py-2 mb-3 bg-blue-50 italic text-gray-700 rounded-r">
-																		{children}
-																	</blockquote>
-																),
-																strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
-																em: ({children}) => <em className="italic text-gray-700">{children}</em>,
-																hr: () => <hr className="my-4 border-gray-300" />,
-																table: ({children}) => (
-																	<div className="overflow-x-auto mb-3">
-																		<table className="w-full border-collapse border border-gray-300 text-sm">
-																			{children}
-																		</table>
-																	</div>
-																),
-																thead: ({children}) => <thead className="bg-gray-100">{children}</thead>,
-																tbody: ({children}) => <tbody>{children}</tbody>,
-																tr: ({children}) => <tr className="border-b border-gray-200">{children}</tr>,
-																th: ({children}) => <th className="border border-gray-300 px-3 py-2 text-left font-semibold text-gray-900">{children}</th>,
-																td: ({children}) => <td className="border border-gray-300 px-3 py-2 text-gray-800">{children}</td>,
-																pre: ({children}) => (
-																	<pre className="bg-gray-100 p-4 rounded-lg overflow-x-auto mb-3 border border-gray-200">
-																		{children}
-																	</pre>
-																),
-																// 注意：不重写code组件，让CSS处理
-															}}
-														>
-															{results}
-														</ReactMarkdown>
-													)}
-												</div>
+									)}
 											</div>
 										</div>
 
-										{/* 参考来源按钮 - 只在内容生成完成后显示 */}
+							{/* 来源按钮 */}
 										{sources.length > 0 && !loading && (
-											<div className="ml-8 mt-3">
+								<div className="ml-12">
 												<button
 													onClick={() => setShowSourcesModal(true)}
-													className="inline-flex items-center px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium rounded-full border border-blue-200 transition-colors duration-200"
+										className="badge badge-info cursor-pointer hover:opacity-80 transition-opacity"
 												>
-													<svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 													</svg>
-													参考来源 ({sources.length})
+										<span>View {sources.length} sources</span>
 												</button>
 											</div>
-										)}
-									</>
 								)}
 							</div>
 						)}
 
-					{/* 浮动通知消息 */}
-					{(successMessage || errorMessage) && (
-						<div className="fixed top-4 left-1/2 z-50 notification-enter">
-							<div className={`px-4 py-2 rounded-lg shadow-lg text-sm flex items-center space-x-2 ${
-								successMessage 
-									? 'bg-green-500 text-white' 
-									: 'bg-red-500 text-white'
-							}`}>
-								<span className="text-lg">
-									{successMessage ? '✅' : '❌'}
-								</span>
-								<span>{successMessage || errorMessage}</span>
+					{/* 错误提示 */}
+					{queryError && (
+						<div className="flex gap-3 animate-fade-in">
+							<div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+								<svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+								</svg>
+							</div>
+							<div className="glass-card px-5 py-3 border-red-200 bg-red-50">
+								<p className="text-red-600 text-sm font-medium">{queryError}</p>
 							</div>
 						</div>
 					)}
-				</div>
-			</div>
 
-			{/* 固定在底部的输入区域 - ChatGPT风格 */}
-			<div className="flex-shrink-0 border-t border-gray-200 bg-white px-6 py-3">
-				<div className="max-w-5xl mx-auto">
-					<div className="relative">
+					<div ref={messagesEndRef} />
+				</div>
+			</main>
+
+			{/* 输入区域 - 固定在底部 */}
+			<footer className="sticky bottom-0 z-30 flex-shrink-0 px-6 py-5 bg-gradient-to-t from-[--bg-primary] via-[--bg-primary] to-transparent">
+				<div className="max-w-4xl mx-auto">
+					<div className="glass-card-strong p-3">
+						<div className="relative flex items-center">
 						<input
 							type="text"
-							placeholder="发送消息给 RAGenius..."
+								placeholder="Ask RAGenius anything..."
 							value={queryInput}
 							onChange={(e) => setQueryInput(e.target.value)}
 							onKeyPress={(e) => e.key === 'Enter' && !loading && queryInput.trim() && sendStreamQuery()}
-							className="w-full pl-4 pr-12 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+								className="input-glow"
 							disabled={loading}
 						/>
 						<button
 							onClick={sendStreamQuery}
 							disabled={loading || !queryInput.trim()}
-							className="absolute right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 rounded-md flex items-center justify-center transition-colors"
+								className="absolute right-3 w-12 h-12 rounded-[14px] bg-gradient-to-r from-[--accent-start] to-[--accent-mid] flex items-center justify-center transition-all hover:shadow-lg hover:shadow-[--accent-mid]/30 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:scale-100"
 						>
 							{loading ? (
-								<div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
+									<div className="spinner"></div>
 							) : (
-								<svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
 								</svg>
 							)}
 						</button>
 					</div>
 				</div>
-			</div>
-
-			{/* 参考来源弹窗 */}
-			{showSourcesModal && (
-				<div className="fixed inset-0 backdrop-blur-sm bg-white bg-opacity-20 flex items-center justify-center z-50 p-4" onClick={() => setShowSourcesModal(false)}>
-					<div className="bg-white rounded-lg shadow-2xl ring-1 ring-black ring-opacity-5 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-						{/* 弹窗头部 */}
-						<div className="flex items-center justify-between p-4 border-b border-gray-200">
-							<h3 className="text-lg font-semibold text-gray-900 flex items-center">
-								<svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-								</svg>
-								参考来源 ({sources.length})
-							</h3>
-							<button
-								onClick={() => setShowSourcesModal(false)}
-								className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-							>
-								<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-								</svg>
-							</button>
-						</div>
-						
-						{/* 弹窗内容 */}
-						<div className="flex-1 p-4 overflow-y-auto min-h-0">
-							<div className="space-y-4">
-								{sources.map((source, index) => (
-									<div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-										<div className="flex items-start space-x-3">
-											<div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-												<span className="text-blue-600 text-sm font-medium">{index + 1}</span>
-											</div>
-											<div className="flex-1 min-w-0">
-												<h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-													<svg className="w-4 h-4 mr-1.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-														<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-													</svg>
-													{source.source}
-												</h4>
-												<div className="text-sm text-gray-700 leading-relaxed bg-white p-4 rounded border max-h-60 overflow-y-auto">
-													<div className="whitespace-pre-wrap break-words">
-														{source.content}
-													</div>
-												</div>
-											</div>
-										</div>
-									</div>
-								))}
-							</div>
-						</div>
-						
-						{/* 弹窗底部 */}
-						<div className="flex-shrink-0 flex justify-end p-4 border-t border-gray-200 bg-gray-50">
-							<button
-								onClick={() => setShowSourcesModal(false)}
-								className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors"
-							>
-								关闭
-							</button>
-						</div>
-					</div>
+				<p className="text-center text-xs text-[--text-tertiary] mt-4 font-medium">
+					RAGenius generates answers from your documents. Please verify important information.
+				</p>
 				</div>
-			)}
+			</footer>
 
-			{/* 文档预览弹窗 - macOS Quick Look 风格 */}
-			{previewDoc && (
-				<div 
-					className="fixed z-[60] overflow-hidden"
-					style={{
-						left: `${previewPosition.x}px`,
-						top: `${previewPosition.y}px`,
-						width: '280px',
-						maxHeight: '400px',
-						animation: 'quickFadeIn 0.2s ease-out',
-						pointerEvents: 'none',
-						boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15), 0 0 0 0.5px rgba(0, 0, 0, 0.1)',
-						borderRadius: '12px',
-						backgroundColor: 'white'
-					}}
-				>
-					{/* 预览头部 - macOS 风格 */}
-					<div className="px-3 py-2.5 bg-gradient-to-b from-gray-50 to-white border-b border-gray-200">
-						<div className="flex items-center space-x-2.5">
-							<div className="text-2xl flex-shrink-0">
-								{previewDoc.endsWith('.pdf') ? '📕' : 
-								 previewDoc.endsWith('.txt') ? '📄' : 
-								 previewDoc.endsWith('.md') ? '📝' : 
-								 previewDoc.endsWith('.csv') ? '📊' : 
-								 previewDoc.endsWith('.docx') || previewDoc.endsWith('.doc') ? '📘' : '📄'}
-							</div>
-							<div className="flex-1 min-w-0">
-								<h4 className="text-xs font-semibold text-gray-900 truncate leading-tight">{previewDoc}</h4>
-								{previewData && previewData.size && (
-									<p className="text-[10px] text-gray-500 mt-0.5">
-										{(previewData.size / 1024).toFixed(1)} KB
-									</p>
-								)}
-							</div>
-						</div>
-					</div>
-					
-					{/* 预览内容区域 - 模拟文档第一页 */}
-					<div className="bg-white" style={{ height: '320px' }}>
-						{previewLoading ? (
-							<div className="flex items-center justify-center h-full bg-gray-50">
-								<div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-							</div>
-						) : previewData ? (
-							<div className="h-full overflow-hidden relative">
-								{/* 文档内容预览 - 白色纸张效果 */}
-								<div className="h-full bg-white p-5 overflow-hidden">
-									<div className="text-[10px] leading-[1.4] text-gray-800 font-sans whitespace-pre-wrap break-words" 
-										style={{ 
-											fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-										}}>
-										{previewData.preview}
-									</div>
-								</div>
-								{/* 底部渐变遮罩 */}
-								<div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white via-white/50 to-transparent pointer-events-none"></div>
-								{/* 纸张阴影效果 */}
-								<div className="absolute inset-0 pointer-events-none" style={{
-									boxShadow: 'inset 0 0 0 1px rgba(0, 0, 0, 0.03)'
-								}}></div>
-							</div>
-						) : null}
-					</div>
-				</div>
-			)}
+			{/* 侧边栏背景遮罩 */}
+			<div 
+				className={`sidebar-backdrop ${sidebarOpen ? 'open' : ''}`}
+				onClick={() => setSidebarOpen(false)}
+			/>
 
-			{/* 侧边栏 - 文档管理 */}
-			<div className="fixed right-0 top-0 h-full w-80 bg-white border-l border-gray-200 transform translate-x-full transition-transform duration-300 ease-in-out z-50" id="sidebar">
-				<div className="p-6 flex flex-col h-full">
-					<div className="flex items-center justify-between mb-6">
-						<h3 className="text-lg font-semibold text-gray-900">文档管理</h3>
-						<button className="text-gray-400 hover:text-gray-600" onClick={() => {
-							document.getElementById('sidebar').classList.add('translate-x-full');
-						}}>
-							<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			{/* 侧边栏 */}
+			<aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+				<div className="flex flex-col h-full p-7">
+					{/* 侧边栏头部 */}
+					<div className="flex items-center justify-between mb-7">
+						<h2 className="text-xl font-bold text-[--text-primary]">Documents</h2>
+						<button
+							onClick={() => setSidebarOpen(false)}
+							className="btn-icon w-10 h-10"
+						>
+							<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
 							</svg>
 						</button>
 					</div>
 
-					{/* 上传文件按钮 */}
-					<div className="mb-4 space-y-2">
+					{/* 上传区域 */}
+					<div className="space-y-3 mb-7">
 						<input
 							type="file"
 							ref={fileInputRef}
 							onChange={handleFileUpload}
 							accept=".pdf,.txt,.md,.csv,.docx,.doc"
 							className="hidden"
-							id="file-upload-input"
+							id="file-upload"
 							disabled={uploading}
 						/>
 						<button
 							onClick={() => fileInputRef.current?.click()}
 							disabled={uploading}
-							className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+							className="btn-primary w-full flex items-center justify-center gap-3"
 						>
 							{uploading ? (
 								<>
-									<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-									<span>上传中...</span>
+									<div className="spinner"></div>
+									<span>Uploading...</span>
 								</>
 							) : (
 								<>
-									<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
 									</svg>
-									<span>上传文件</span>
+									<span>Upload Document</span>
 								</>
 							)}
 						</button>
-						{/* 清空所有文档按钮 */}
+
 						{documents.length > 0 && (
 							<button
 								onClick={clearAllDocuments}
-								className="w-full px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 text-sm font-medium rounded-lg transition-colors flex items-center justify-center space-x-2"
+								className="btn-ghost w-full flex items-center justify-center gap-2 text-red-500 border-red-200 hover:bg-red-50 hover:border-red-300"
 							>
-								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
 								</svg>
-								<span>清空所有文档</span>
+								<span>Clear All</span>
 							</button>
 						)}
 					</div>
 
-					{/* 消息提示 - 只显示重建知识库的消息 */}
-					{(successMessage || errorMessage) && messageSource === 'rebuild' && (
-						<div className={`mb-4 px-3 py-2 rounded-lg text-sm ${
-							successMessage ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-						}`}>
-							{successMessage || errorMessage}
-						</div>
-					)}
-
 					{/* 文档列表 */}
-					<div className="flex-1 space-y-2 overflow-y-auto relative">
+					<div className="flex-1 overflow-y-auto custom-scrollbar -mx-2">
 						{documents.length > 0 ? (
-							// 去重：确保每个文件只显示一次
-							Array.from(new Set(documents)).map((doc) => {
+							<div className="space-y-2">
+								{Array.from(new Set(documents)).map((doc) => {
 								const isVectorized = vectorizedDocuments.includes(doc);
 								return (
-									<div 
-										key={doc} 
-										className="group flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 gap-3 transition-colors relative"
-									>
-										<div 
-											className="flex items-center space-x-3 flex-1 min-w-0 cursor-pointer"
-											onMouseEnter={(e) => handleMouseEnter(doc, e)}
-											onMouseMove={handleMouseMove}
-											onMouseLeave={handleMouseLeave}
-										>
-											<div className="text-lg flex-shrink-0">
-												{doc.endsWith('.pdf') ? '📕' : 
-												 doc.endsWith('.txt') ? '📄' : 
-												 doc.endsWith('.md') ? '📝' : 
-												 doc.endsWith('.csv') ? '📊' : 
-												 doc.endsWith('.docx') || doc.endsWith('.doc') ? '📘' : '📄'}
-											</div>
+										<div key={doc} className="doc-item group">
+											<div className="doc-icon">{getDocIcon(doc)}</div>
 											<div className="flex-1 min-w-0">
-												<p className="text-sm font-medium text-gray-900 truncate">{doc}</p>
+												<p className="text-sm font-semibold text-[--text-primary] truncate">{doc}</p>
 											</div>
-										</div>
-										<div className="flex items-center space-x-2 flex-shrink-0">
-											<div className={`w-2 h-2 rounded-full ${isVectorized ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-											{/* 删除按钮 - 鼠标悬停时显示 */}
+											<div className={`doc-status ${isVectorized ? 'active' : 'inactive'}`}></div>
 											<button
-												onClick={(e) => {
-													e.stopPropagation();
-													deleteDocument(doc);
-												}}
-												className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
-												title="删除文档"
+												onClick={() => deleteDocument(doc)}
+												className="opacity-0 group-hover:opacity-100 p-2 text-[--text-tertiary] hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
 											>
-												<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
 												</svg>
 											</button>
 										</div>
+									);
+								})}
 									</div>
-								);
-							})
 						) : (
-							<div className="text-center py-8 text-gray-500">
-								<div className="text-3xl mb-2">📭</div>
-								<p className="text-sm">暂无文档</p>
+							<div className="flex flex-col items-center justify-center h-full text-center py-16">
+								<div className="text-5xl mb-4 opacity-60">📂</div>
+								<p className="text-[--text-secondary] font-medium">No documents yet</p>
+								<p className="text-[--text-tertiary] text-sm mt-1">Click above to upload</p>
 							</div>
 						)}
 					</div>
+
+					{/* 底部提示 */}
+					<div className="mt-5 pt-5 border-t border-[--border-color]">
+						<p className="text-xs text-[--text-tertiary] text-center font-medium">
+							Supports PDF, TXT, MD, CSV, DOCX
+						</p>
+					</div>
 				</div>
+			</aside>
+
+			{/* 来源弹窗 */}
+			{showSourcesModal && (
+				<div className="modal-backdrop" onClick={() => setShowSourcesModal(false)}>
+					<div className="modal-content" onClick={(e) => e.stopPropagation()}>
+						{/* 弹窗头部 */}
+						<div className="flex items-center justify-between p-6 border-b border-[--border-color]">
+							<h3 className="text-xl font-bold text-[--text-primary] flex items-center gap-3">
+								<div className="w-10 h-10 rounded-xl bg-[--soft-purple] flex items-center justify-center">
+									<svg className="w-5 h-5 text-[--accent-mid]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+									</svg>
+								</div>
+								Sources ({sources.length})
+							</h3>
+							<button
+								onClick={() => setShowSourcesModal(false)}
+								className="btn-icon w-10 h-10"
+							>
+								<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+								</svg>
+							</button>
+						</div>
+
+						{/* 弹窗内容 */}
+						<div className="p-6 overflow-y-auto max-h-[55vh] custom-scrollbar space-y-4">
+							{sources.map((source, index) => (
+								<div key={index} className="glass-card p-5">
+									<div className="flex items-start gap-4">
+										<div className="w-10 h-10 rounded-xl bg-[--soft-purple] flex items-center justify-center flex-shrink-0">
+											<span className="text-[--accent-mid] text-sm font-bold">{index + 1}</span>
+										</div>
+										<div className="flex-1 min-w-0">
+											<h4 className="text-sm font-bold text-[--text-primary] mb-3 flex items-center gap-2">
+												{getDocIcon(source.source)}
+												{source.source}
+											</h4>
+											<div className="text-sm text-[--text-secondary] leading-relaxed bg-[--bg-tertiary] p-4 rounded-xl border border-[--border-color] max-h-44 overflow-y-auto custom-scrollbar">
+												{source.content}
+											</div>
+										</div>
+									</div>
+								</div>
+							))}
 			</div>
 
+						{/* 弹窗底部 */}
+						<div className="p-6 border-t border-[--border-color] flex justify-end">
+							<button
+								onClick={() => setShowSourcesModal(false)}
+								className="btn-primary"
+							>
+								<span>Close</span>
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 };
