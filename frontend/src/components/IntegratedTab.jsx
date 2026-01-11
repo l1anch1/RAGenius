@@ -275,7 +275,13 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 		}
 	};
 
-	// 组件挂载
+	// 组件挂载 - 总是获取文档列表
+	useEffect(() => {
+		fetchDocuments();
+		fetchVectorizedDocuments();
+	}, []);
+
+	// isInitialized 变化时刷新
 	useEffect(() => {
 		if (isInitialized) {
 			fetchDocuments();
@@ -325,7 +331,7 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 	};
 
 	return (
-		<div className="h-screen flex flex-col relative overflow-hidden">
+		<div className="min-h-screen relative">
 			{/* 背景效果 */}
 			<div className="bg-pattern">
 				<div className="grid-overlay"></div>
@@ -339,8 +345,8 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 				</div>
 			)}
 
-			{/* 顶部导航栏 */}
-			<header className="relative z-20 flex-shrink-0 px-6 py-4 bg-[--bg-primary]/95 backdrop-blur-sm">
+			{/* 顶部导航栏 - 固定定位 */}
+			<header className="fixed top-0 left-0 right-0 z-20 px-6 py-4 bg-[--bg-primary]/95 backdrop-blur-sm">
 				<div className="max-w-5xl mx-auto flex items-center justify-between">
 					{/* Logo */}
 					<div className="flex items-center gap-4">
@@ -422,12 +428,12 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 					</div>
 			</header>
 
-			{/* 消息区域 */}
-			<main className="relative z-10 flex-1 overflow-y-auto custom-scrollbar px-6 pb-4">
+			{/* 消息区域 - 添加顶部 padding 避免被 fixed header 遮挡 */}
+			<main className="relative z-10 min-h-screen px-6 pb-32 pt-24">
 				<div className="max-w-4xl mx-auto space-y-6">
 					{/* 欢迎界面 */}
 						{chatHistory.length === 0 && !currentQuestion && !results && !loading && (
-						<div className="flex flex-col items-center justify-center min-h-[45vh] text-center animate-fade-in-up">
+						<div className="flex flex-col items-center justify-center min-h-[60vh] text-center animate-fade-in-up">
 							<div className="welcome-icon mb-8 animate-float">
 								<svg className="w-12 h-12 text-white relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -558,8 +564,8 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 				</div>
 			</main>
 
-			{/* 输入区域 */}
-			<footer className="relative z-20 flex-shrink-0 px-6 py-4 bg-[--bg-primary]/95 backdrop-blur-sm">
+			{/* 输入区域 - 固定在底部 */}
+			<footer className="fixed bottom-0 left-0 right-0 z-20 px-6 py-4 bg-[--bg-primary]/95 backdrop-blur-sm">
 				<div className="max-w-4xl mx-auto">
 					<div className="glass-card-strong p-3">
 						<div className="relative flex items-center">
