@@ -27,7 +27,7 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Build backend image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: ./backend
         file: ./backend/Dockerfile
@@ -40,7 +40,7 @@ jobs:
       timeout-minutes: 25
 
     - name: Build frontend image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: ./frontend
         file: ./frontend/Dockerfile
