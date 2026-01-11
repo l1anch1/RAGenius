@@ -355,8 +355,8 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 							<div>
 							<h1 className="text-xl font-bold gradient-text">RAGenius</h1>
 							<p className="text-xs text-[--text-tertiary] font-medium">AI-Powered Knowledge</p>
+							</div>
 						</div>
-					</div>
 
 					{/* 右侧操作区 */}
 					<div className="flex items-center gap-3">
@@ -468,7 +468,7 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 									<p className="leading-relaxed">{turn.question}</p>
 									</div>
 								<div className="avatar-user">U</div>
-									</div>
+								</div>
 
 							{/* AI 回复 */}
 							<div className="flex gap-3">
@@ -476,7 +476,7 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 									<svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
 									</svg>
-								</div>
+									</div>
 								<div className="message-ai flex-1">
 									<div className="markdown-content">
 										<ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
@@ -489,15 +489,15 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 						))}
 
 					{/* 当前对话 */}
-					{currentQuestion && (
+						{currentQuestion && (
 						<div className="space-y-5 animate-fade-in-up">
-							{/* 用户问题 */}
+								{/* 用户问题 */}
 							<div className="flex justify-end gap-3">
 								<div className="message-user">
 									<p className="leading-relaxed">{currentQuestion}</p>
-								</div>
+									</div>
 								<div className="avatar-user">U</div>
-							</div>
+								</div>
 
 							{/* AI 回复 */}
 							<div className="flex gap-3">
@@ -505,21 +505,21 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 									<svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
 									</svg>
-								</div>
+										</div>
 								<div className="message-ai flex-1">
 									{loading && !results ? (
 										<div className="loading-dots py-2">
 											<div className="loading-dot"></div>
 											<div className="loading-dot"></div>
 											<div className="loading-dot"></div>
-										</div>
+											</div>
 									) : (
 										<div className="markdown-content" ref={resultsRef}>
 											<ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-												{results}
-											</ReactMarkdown>
+															{results}
+														</ReactMarkdown>
 										</div>
-									)}
+													)}
 											</div>
 										</div>
 
@@ -590,7 +590,7 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 				<p className="text-center text-xs text-[--text-tertiary] mt-4 font-medium">
 					RAGenius generates answers from your documents. Please verify important information.
 				</p>
-				</div>
+			</div>
 			</footer>
 
 			{/* 侧边栏背景遮罩 */}
@@ -605,7 +605,7 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 					{/* 侧边栏头部 */}
 					<div className="flex items-center justify-between mb-7">
 						<h2 className="text-xl font-bold text-[--text-primary]">Documents</h2>
-						<button
+							<button
 							onClick={() => setSidebarOpen(false)}
 							className="btn-icon w-10 h-10"
 						>
@@ -646,7 +646,7 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 							)}
 						</button>
 
-						{documents.length > 0 && (
+						{(documents.length > 0 || vectorizedDocuments.length > 0) && (
 							<button
 								onClick={clearAllDocuments}
 								className="btn-ghost w-full flex items-center justify-center gap-2 text-red-500 border-red-200 hover:bg-red-50 hover:border-red-300"
@@ -661,36 +661,55 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 
 					{/* 文档列表 */}
 					<div className="flex-1 overflow-y-auto custom-scrollbar -mx-2">
-						{documents.length > 0 ? (
-							<div className="space-y-2">
-								{Array.from(new Set(documents)).map((doc) => {
-								const isVectorized = vectorizedDocuments.includes(doc);
+						{(() => {
+							// 合并 documents 和 vectorizedDocuments（去重）
+							const allDocs = Array.from(new Set([...documents, ...vectorizedDocuments]));
+							
+							if (allDocs.length > 0) {
 								return (
-										<div key={doc} className="doc-item group">
-											<div className="doc-icon">{getDocIcon(doc)}</div>
+									<div className="space-y-2">
+										{allDocs.map((doc) => {
+								const isVectorized = vectorizedDocuments.includes(doc);
+											const isInMemory = documents.includes(doc);
+											const isOrphanedVector = isVectorized && !isInMemory; // 只有向量数据，没有原始文件
+											
+								return (
+												<div key={doc} className="doc-item group">
+													<div className="doc-icon">{getDocIcon(doc)}</div>
 											<div className="flex-1 min-w-0">
-												<p className="text-sm font-semibold text-[--text-primary] truncate">{doc}</p>
+														<p className="text-sm font-semibold text-[--text-primary] truncate">{doc}</p>
+														{isOrphanedVector && (
+															<p className="text-xs text-[--text-tertiary]">Restored from cache</p>
+														)}
 											</div>
-											<div className={`doc-status ${isVectorized ? 'active' : 'inactive'}`}></div>
-											<button
-												onClick={() => deleteDocument(doc)}
-												className="opacity-0 group-hover:opacity-100 p-2 text-[--text-tertiary] hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-											>
-												<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-												</svg>
-											</button>
+													<div className={`doc-status ${isVectorized ? 'active' : 'inactive'}`}></div>
+													{isInMemory ? (
+														<button
+															onClick={() => deleteDocument(doc)}
+															className="opacity-0 group-hover:opacity-100 p-2 text-[--text-tertiary] hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+														>
+															<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+																<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+															</svg>
+														</button>
+													) : (
+														<span className="text-xs text-[--text-tertiary] px-2">🔒</span>
+													)}
 										</div>
-									);
-								})}
+											);
+										})}
 									</div>
-						) : (
-							<div className="flex flex-col items-center justify-center h-full text-center py-16">
-								<div className="text-5xl mb-4 opacity-60">📂</div>
-								<p className="text-[--text-secondary] font-medium">No documents yet</p>
-								<p className="text-[--text-tertiary] text-sm mt-1">Click above to upload</p>
+								);
+							} else {
+								return (
+									<div className="flex flex-col items-center justify-center h-full text-center py-16">
+										<div className="text-5xl mb-4 opacity-60">📂</div>
+										<p className="text-[--text-secondary] font-medium">No documents yet</p>
+										<p className="text-[--text-tertiary] text-sm mt-1">Click above to upload</p>
 							</div>
-						)}
+								);
+							}
+						})()}
 					</div>
 
 					{/* 底部提示 */}
@@ -698,8 +717,8 @@ const IntegratedTab = ({ isInitialized, refreshSystemInfo }) => {
 						<p className="text-xs text-[--text-tertiary] text-center font-medium">
 							Supports PDF, TXT, MD, CSV, DOCX
 						</p>
-					</div>
 				</div>
+			</div>
 			</aside>
 
 			{/* 来源弹窗 */}
