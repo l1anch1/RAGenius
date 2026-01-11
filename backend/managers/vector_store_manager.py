@@ -159,10 +159,15 @@ class ChromaVectorStoreManager(VectorStoreInterface):
                 
         except Exception as e:
             logger.error(f"Failed to load persistent store: {e}")
-            # 如果加载失败，清理可能损坏的数据
+            # 如果加载失败，清理可能损坏的数据（清空目录内容，不删除目录）
             import shutil
             try:
-                shutil.rmtree(persist_dir)
+                for item in os.listdir(persist_dir):
+                    item_path = os.path.join(persist_dir, item)
+                    if os.path.isdir(item_path):
+                        shutil.rmtree(item_path)
+                    else:
+                        os.remove(item_path)
                 logger.info(f"Cleaned up corrupted persistent data: {persist_dir}")
             except Exception:
                 pass
@@ -182,15 +187,21 @@ class ChromaVectorStoreManager(VectorStoreInterface):
             with self._lock:
                 logger.info("Clearing vector store and metadata...")
                 
-                # 如果有持久化目录，删除它
+                # 如果有持久化目录，清空其内容（不删除目录本身，因为可能是挂载点）
                 persist_dir = os.getenv("CHROMA_PERSIST_DIR", "")
                 if persist_dir and os.path.exists(persist_dir):
                     import shutil
                     try:
-                        shutil.rmtree(persist_dir)
-                        logger.info(f"Deleted persistent ChromaDB directory: {persist_dir}")
+                        # 清空目录内容，但保留目录本身
+                        for item in os.listdir(persist_dir):
+                            item_path = os.path.join(persist_dir, item)
+                            if os.path.isdir(item_path):
+                                shutil.rmtree(item_path)
+                            else:
+                                os.remove(item_path)
+                        logger.info(f"Cleared contents of persistent directory: {persist_dir}")
                     except Exception as e:
-                        logger.error(f"Failed to delete persistent directory: {e}")
+                        logger.error(f"Failed to clear persistent directory contents: {e}")
                 
                 # 清空向量存储
                 self._vector_store = None
@@ -288,14 +299,22 @@ class ChromaVectorStoreManager(VectorStoreInterface):
                 persist_dir = os.getenv("CHROMA_PERSIST_DIR", "")
                 
                 if persist_dir:
-                    # 持久化模式 - 先删除旧数据再创建新的
+                    # 持久化模式 - 先清空旧数据再创建新的
                     logger.info(f"Using persistent mode with directory: {persist_dir}")
                     
-                    # 删除旧的持久化数据，确保干净重建
+                    # 清空持久化目录内容（不删除目录本身，因为可能是挂载点）
                     if os.path.exists(persist_dir):
                         import shutil
-                        shutil.rmtree(persist_dir)
-                        logger.info(f"Deleted old persistent data at: {persist_dir}")
+                        for item in os.listdir(persist_dir):
+                            item_path = os.path.join(persist_dir, item)
+                            try:
+                                if os.path.isdir(item_path):
+                                    shutil.rmtree(item_path)
+                                else:
+                                    os.remove(item_path)
+                            except Exception as e:
+                                logger.warning(f"Failed to remove {item_path}: {e}")
+                        logger.info(f"Cleared old persistent data at: {persist_dir}")
                     
                     os.makedirs(persist_dir, exist_ok=True)
                     self._vector_store = Chroma.from_documents(
@@ -312,8 +331,8 @@ class ChromaVectorStoreManager(VectorStoreInterface):
                     self._vector_store = Chroma(
                         client=ephemeral_client,
                         embedding_function=embedding_model,
-                        collection_name="documents"
-                    )
+                    collection_name="documents"
+                )
                     # 手动添加文档
                     self._vector_store.add_documents(documents=chunks)
                 
