@@ -26,7 +26,7 @@ const KnowledgeBase = () => {
 	};
 
 	return (
-		<div className="h-screen w-full overflow-hidden bg-[--bg-primary]">
+		<div className="h-screen w-full flex flex-col bg-[--bg-primary]">
 			<IntegratedTab isInitialized={isInitialized} refreshSystemInfo={fetchSystemInfo} />
 		</div>
 	);
