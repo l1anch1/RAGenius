@@ -163,15 +163,7 @@ Have questions? Feel free to reach out!
 
 <div align="center">
 
-### ⭐ Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=l1anch1/RAGenius&type=Date)](https://star-history.com/#l1anch1/RAGenius&Date)
-
----
-
 **If this project helps you, please consider giving it a ⭐!**
-
-Your support helps others discover RAGenius and motivates continued development.
 
 [![GitHub stars](https://img.shields.io/github/stars/l1anch1/RAGenius?style=social)](https://github.com/l1anch1/RAGenius)
 
