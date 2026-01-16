@@ -17,7 +17,7 @@
     "react-icons": "^5.5.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "tailwindcss": "^4.1.11",
+    "tailwindcss": "^4.1.18",
     "yarn": "^1.22.22"
   },
   "devDependencies": {
